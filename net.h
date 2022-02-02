@@ -1,0 +1,3 @@
+struct net_device{
+
+}

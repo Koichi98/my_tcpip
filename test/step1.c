@@ -1,13 +1,34 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <signal.h>
+
 #include "util.h"
+#include "net.h"
+#include "driver/null.h"
 #include "test.h"
 
-int
-main(void)
-{
+
+
+
+static volatile sig_atomic_t terminate;
+
+static void on_signal(int s){
+    (void)s;
+    terminate = 1;
+}
+
+
+int main(int argc, char *argv[]){
 
     struct net_device *dev;
 
-    signal(SIGINT,on_signal);
+    struct sigaction *sigact;
+    sigact->sa_handler = on_signal;
+    sigact->sa_mask  = 0;
+    sigact->sa_flags = 0; 
+    sigaction(SIGINT,sigact,NULL);
+
     if(net_init()==-1){
         errorf("net_init() failure");
         return -1;

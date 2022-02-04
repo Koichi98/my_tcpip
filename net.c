@@ -10,7 +10,13 @@
 static struct net_device *devices;
 
 struct net_device* net_device_alloc(void){
-
+    struct net_device* dev;
+    dev = calloc(1,sizeof(dev));
+    if(!dev){
+        errorf("calloc() failure");
+        return NULL;
+    }
+    return dev;
 }
 
 int net_device_register(struct net_device *dev){

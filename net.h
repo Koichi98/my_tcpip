@@ -27,11 +27,11 @@ struct net_device{
     struct net_device *next;
     unsigned int index;
     char name[IFNAMSIZ];
-    uint16_t type;
-    uint16_t mtu;
-    uint16_t flags;
-    uint16_t hlen;
-    uint16_t alen;
+    uint16_t type; //Unique id to distinguish each device
+    uint16_t mtu; //MTU of the device
+    uint16_t flags; //Flag to manage the state of the device
+    uint16_t hlen; // Length of the header
+    uint16_t alen; // Length of the address
     uint8_t addr[NET_DEVICE_ADDR_LEN];
     union{
         uint8_t peer[NET_DEVICE_ADDR_LEN];

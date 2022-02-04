@@ -7,7 +7,7 @@
 #include "util.h"
 #include "net.h"
 
-
+static struct net_device *devices;
 
 struct net_device* net_device_alloc(void){
 
@@ -21,7 +21,7 @@ static int net_device_open(struct net_device *dev){
 
 }
 
-static int net_device_open(struct net_device *dev){
+static int net_device_close(struct net_device *dev){
 
 }
 
@@ -37,10 +37,10 @@ int net_run(void){
 
 }
 
-int net_shutdown(void){
+void net_shutdown(void){
 
 }
 
 int net_init(void){
-
+    return 0;
 }

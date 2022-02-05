@@ -1,3 +1,5 @@
+#define _XOPEN_SOURCE
+
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -7,9 +9,6 @@
 #include "net.h"
 #include "driver/null.h"
 #include "test.h"
-
-
-
 
 static volatile sig_atomic_t terminate;
 
@@ -23,11 +22,11 @@ int main(int argc, char *argv[]){
 
     struct net_device *dev;
 
-    struct sigaction *sigact;
+    /*struct sigaction* sigact;
     sigact->sa_handler = on_signal;
-    sigact->sa_mask  = 0;
     sigact->sa_flags = 0; 
-    sigaction(SIGINT,sigact,NULL);
+    sigaction(SIGINT,sigact,NULL);*/
+    signal(SIGINT,on_signal);
 
     if(net_init()==-1){
         errorf("net_init() failure");

@@ -48,7 +48,6 @@ int net_device_register(struct net_device *dev){
     return 0;
 }
 
-//
 static int net_device_open(struct net_device *dev){
     if(NET_DEVICE_IS_UP(dev)){
         errorf("already opened, dev=%s",dev->name);
@@ -57,6 +56,7 @@ static int net_device_open(struct net_device *dev){
     if(dev->ops->open){
         if(dev->ops->open(dev) == -1){
             errorf("failure, dev=%s", dev->name);
+            return -1;
         }
     }
     dev->flags |= NET_DEVICE_FLAG_UP;
@@ -99,11 +99,10 @@ int net_device_output(struct net_device *dev, uint16_t type, const uint8_t *data
 }
 
 int net_input_handler(uint16_t type, const uint8_t *data, size_t len, struct net_device *dev){
+
     struct net_protocol* proto;
     struct net_protocol_queue_entry* entry;
     unsigned int num;
-
-
 
     //Storing in the receive queue of the protocol
     for(proto=protocols;proto!=NULL;proto=proto->next){
@@ -178,7 +177,7 @@ int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, si
 int net_run(void){
     struct net_device* dev;
     for(dev=devices;dev!=NULL;dev=dev->next){
-        if(net_device_open(dev)){
+        if(net_device_open(dev) == -1){
             return -1;
         }
     }

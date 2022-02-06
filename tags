@@ -1,0 +1,150 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
+!_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
+!_TAG_PROC_CWD	/home/nowi74/Documents/my_tcpip/	//
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	5.9.0	/p5.9.20211003.0/
+$(APPS)	Makefile	/^$(APPS): %.exe : %.o $(OBJS) $(DRIVERS)$/;"	t
+$(TESTS)	Makefile	/^$(TESTS): %.exe : %.o $(OBJS) $(DRIVERS)$/;"	t
+%.exe	Makefile	/^$(APPS): %.exe : %.o $(OBJS) $(DRIVERS)$/;"	t
+%.exe	Makefile	/^$(TESTS): %.exe : %.o $(OBJS) $(DRIVERS)$/;"	t
+.c.o	Makefile	/^.c.o:$/;"	t
+APPS	Makefile	/^APPS = $/;"	m
+CFLAGS	Makefile	/^       CFLAGS := $(CFLAGS) -pthread$/;"	m
+CFLAGS	Makefile	/^       CFLAGS := $(CFLAGS)$/;"	m
+CFLAGS	Makefile	/^CFLAGS := $(CFLAGS) -g -W -Wall -Wno-unused-parameter -I .$/;"	m
+DEFAULT_GATEWAY	test/test.h	/^#define DEFAULT_GATEWAY /;"	d
+DRIVERS	Makefile	/^       DRIVERS := $(DRIVERS)$/;"	m
+DRIVERS	Makefile	/^DRIVERS =  driver\/null.o \\$/;"	m
+ETHER_TAP_HW_ADDR	test/test.h	/^#define ETHER_TAP_HW_ADDR /;"	d
+ETHER_TAP_IP_ADDR	test/test.h	/^#define ETHER_TAP_IP_ADDR /;"	d
+ETHER_TAP_NAME	test/test.h	/^#define ETHER_TAP_NAME /;"	d
+ETHER_TAP_NETMASK	test/test.h	/^#define ETHER_TAP_NETMASK /;"	d
+IFNAMSIZ	net.h	/^#define IFNAMSIZ /;"	d
+LOOPBACK_H	driver/loopback.h	/^#define LOOPBACK_H$/;"	d
+LOOPBACK_IP_ADDR	test/test.h	/^#define LOOPBACK_IP_ADDR /;"	d
+LOOPBACK_MTU	driver/loopback.c	/^#define LOOPBACK_MTU /;"	d	file:
+LOOPBACK_NETMASK	test/test.h	/^#define LOOPBACK_NETMASK /;"	d
+MAX	util.h	/^#define MAX(/;"	d
+MIN	util.h	/^#define MIN(/;"	d
+NET_DEVICE_ADDR_LEN	net.h	/^#define NET_DEVICE_ADDR_LEN /;"	d
+NET_DEVICE_FLAG_BROADCAST	net.h	/^#define NET_DEVICE_FLAG_BROADCAST /;"	d
+NET_DEVICE_FLAG_LOOPBACK	net.h	/^#define NET_DEVICE_FLAG_LOOPBACK /;"	d
+NET_DEVICE_FLAG_NEED_ARP	net.h	/^#define NET_DEVICE_FLAG_NEED_ARP /;"	d
+NET_DEVICE_FLAG_P2P	net.h	/^#define NET_DEVICE_FLAG_P2P /;"	d
+NET_DEVICE_FLAG_UP	net.h	/^#define NET_DEVICE_FLAG_UP /;"	d
+NET_DEVICE_IS_UP	net.h	/^#define NET_DEVICE_IS_UP(/;"	d
+NET_DEVICE_STATE	net.h	/^#define NET_DEVICE_STATE(/;"	d
+NET_DEVICE_TYPE_ETHERNET	net.h	/^#define NET_DEVICE_TYPE_ETHERNET /;"	d
+NET_DEVICE_TYPE_LOOPBACK	net.h	/^#define NET_DEVICE_TYPE_LOOPBACK /;"	d
+NET_DEVICE_TYPE_NULL	net.h	/^#define NET_DEVICE_TYPE_NULL /;"	d
+NET_H	net.h	/^#define NET_H$/;"	d
+NET_PROTOCOL_TYPE_ARP	net.h	/^#define NET_PROTOCOL_TYPE_ARP /;"	d
+NET_PROTOCOL_TYPE_IP	net.h	/^#define NET_PROTOCOL_TYPE_IP /;"	d
+NET_PROTOCOL_TYPE_IPV6	net.h	/^#define NET_PROTOCOL_TYPE_IPV6 /;"	d
+NULL_H	driver/null.h	/^#define NULL_H$/;"	d
+NULL_MTU	driver/null.c	/^#define NULL_MTU /;"	d	file:
+OBJS	Makefile	/^OBJS = util.o \\$/;"	m
+TESTS	Makefile	/^TESTS = test\/step0.exe \\$/;"	m
+TEST_H	test/test.h	/^#define TEST_H$/;"	d
+UTIL_H	util.h	/^#define UTIL_H$/;"	d
+__BIG_ENDIAN	util.c	/^#define __BIG_ENDIAN /;"	d	file:
+__LITTLE_ENDIAN	util.c	/^#define __LITTLE_ENDIAN /;"	d	file:
+__anon0ffedda2010a	net.h	/^    union{$/;"	u	struct:net_device
+addr	net.h	/^    uint8_t addr[NET_DEVICE_ADDR_LEN];$/;"	m	struct:net_device	typeref:typename:uint8_t[]
+alen	net.h	/^    uint16_t alen; \/\/ Length of the address$/;"	m	struct:net_device	typeref:typename:uint16_t
+all	Makefile	/^all: $(APPS) $(TESTS)$/;"	t
+broadcast	net.h	/^        uint8_t broadcast[NET_DEVICE_ADDR_LEN];$/;"	m	union:net_device::__anon0ffedda2010a	typeref:typename:uint8_t[]
+byteorder	util.c	/^byteorder(void) {$/;"	f	typeref:typename:int	file:
+byteswap16	util.c	/^byteswap16(uint16_t v)$/;"	f	typeref:typename:uint16_t	file:
+byteswap32	util.c	/^byteswap32(uint32_t v)$/;"	f	typeref:typename:uint32_t	file:
+cksum16	util.c	/^cksum16(uint16_t *addr, uint16_t count, uint32_t init)$/;"	f	typeref:typename:uint16_t
+clean	Makefile	/^clean:$/;"	t
+close	net.h	/^    int (*close)(struct net_device *dev);$/;"	m	struct:net_device_ops	typeref:typename:int (*)(struct net_device * dev)
+countof	util.h	/^#define countof(/;"	d
+data	util.c	/^    void *data;$/;"	m	struct:queue_entry	typeref:typename:void *	file:
+debugdump	util.h	/^#define debugdump(/;"	d
+debugf	util.h	/^#define debugf(/;"	d
+dev	net.c	/^    struct net_device *dev;$/;"	m	struct:net_protocol_queue_entry	typeref:struct:net_device *	file:
+devices	net.c	/^static struct net_device *devices;$/;"	v	typeref:struct:net_device *	file:
+endian	util.c	/^static int endian;$/;"	v	typeref:typename:int	file:
+errorf	util.h	/^#define errorf(/;"	d
+flags	net.h	/^    uint16_t flags; \/\/Flag to manage the state of the device$/;"	m	struct:net_device	typeref:typename:uint16_t
+handler	net.c	/^    void (*handler)(const uint8_t *data, size_t len, struct net_device *dev);$/;"	m	struct:net_protocol	typeref:typename:void (*)(const uint8_t * data,size_t len,struct net_device * dev)	file:
+head	util.h	/^    struct queue_entry *head;$/;"	m	struct:queue_head	typeref:struct:queue_entry *
+hexdump	util.c	/^hexdump(FILE *fp, const void *data, size_t size)$/;"	f	typeref:typename:void
+hlen	net.h	/^    uint16_t hlen; \/\/ Length of the header$/;"	m	struct:net_device	typeref:typename:uint16_t
+hton16	util.c	/^hton16(uint16_t h)$/;"	f	typeref:typename:uint16_t
+hton32	util.c	/^hton32(uint32_t h)$/;"	f	typeref:typename:uint32_t
+index	net.h	/^    unsigned int index;$/;"	m	struct:net_device	typeref:typename:unsigned int
+indexof	util.h	/^#define indexof(/;"	d
+infof	util.h	/^#define infof(/;"	d
+len	net.c	/^    size_t len;$/;"	m	struct:net_protocol_queue_entry	typeref:typename:size_t	file:
+loopback_init	driver/loopback.c	/^struct net_device* loopback_init(void){$/;"	f	typeref:struct:net_device *
+loopback_ops	driver/loopback.c	/^static struct net_device_ops loopback_ops = {$/;"	v	typeref:struct:net_device_ops	file:
+loopback_transmit	driver/loopback.c	/^static int loopback_transmit(struct net_device *dev, uint16_t type, const uint8_t *data, size_t /;"	f	typeref:typename:int	file:
+lprintf	util.c	/^lprintf(FILE *fp, int level, const char *file, int line, const char *func, const char *fmt, ...)$/;"	f	typeref:typename:int
+main	test/step0.c	/^main(void)$/;"	f	typeref:typename:int
+main	test/step1.c	/^int main(int argc, char *argv[]){$/;"	f	typeref:typename:int
+main	test/step2.c	/^int main(int argc, char *argv[]){$/;"	f	typeref:typename:int
+main	test/step3.c	/^int main(int argc, char *argv[]){$/;"	f	typeref:typename:int
+mtu	net.h	/^    uint16_t mtu; \/\/MTU of the device$/;"	m	struct:net_device	typeref:typename:uint16_t
+mutex	net.c	/^    pthread_mutex_t mutex; \/*mutex for input queue*\/$/;"	m	struct:net_protocol	typeref:typename:pthread_mutex_t	file:
+name	net.h	/^    char name[IFNAMSIZ];$/;"	m	struct:net_device	typeref:typename:char[]
+net_device	net.h	/^struct net_device{$/;"	s
+net_device_alloc	net.c	/^struct net_device* net_device_alloc(void){$/;"	f	typeref:struct:net_device *
+net_device_close	net.c	/^static int net_device_close(struct net_device *dev){$/;"	f	typeref:typename:int	file:
+net_device_open	net.c	/^static int net_device_open(struct net_device *dev){$/;"	f	typeref:typename:int	file:
+net_device_ops	net.h	/^struct net_device_ops {$/;"	s
+net_device_output	net.c	/^int net_device_output(struct net_device *dev, uint16_t type, const uint8_t *data, size_t len, co/;"	f	typeref:typename:int
+net_device_register	net.c	/^int net_device_register(struct net_device *dev){$/;"	f	typeref:typename:int
+net_init	net.c	/^int net_init(void){$/;"	f	typeref:typename:int
+net_input_handler	net.c	/^int net_input_handler(uint16_t type, const uint8_t *data, size_t len, struct net_device *dev){$/;"	f	typeref:typename:int
+net_protocol	net.c	/^struct net_protocol {$/;"	s	file:
+net_protocol_queue_entry	net.c	/^struct net_protocol_queue_entry {$/;"	s	file:
+net_protocol_register	net.c	/^int net_protocol_register(){$/;"	f	typeref:typename:int
+net_run	net.c	/^int net_run(void){$/;"	f	typeref:typename:int
+net_shutdown	net.c	/^void net_shutdown(void){$/;"	f	typeref:typename:void
+next	net.c	/^    struct net_protocol *next;$/;"	m	struct:net_protocol	typeref:struct:net_protocol *	file:
+next	net.h	/^    struct net_device *next;$/;"	m	struct:net_device	typeref:struct:net_device *
+next	util.c	/^    struct queue_entry *next;$/;"	m	struct:queue_entry	typeref:struct:queue_entry *	file:
+ntoh16	util.c	/^ntoh16(uint16_t n)$/;"	f	typeref:typename:uint16_t
+ntoh32	util.c	/^ntoh32(uint32_t n)$/;"	f	typeref:typename:uint32_t
+null_init	driver/null.c	/^struct net_device* null_init(void){$/;"	f	typeref:struct:net_device *
+null_ops	driver/null.c	/^static struct net_device_ops null_ops = {$/;"	v	typeref:struct:net_device_ops	file:
+null_transmit	driver/null.c	/^static int null_transmit(struct net_device *dev, uint16_t type, const uint8_t *data, size_t len,/;"	f	typeref:typename:int	file:
+num	util.h	/^    unsigned int num;$/;"	m	struct:queue_head	typeref:typename:unsigned int
+on_signal	test/step1.c	/^static void on_signal(int s){$/;"	f	typeref:typename:void	file:
+on_signal	test/step2.c	/^static void on_signal(int s){$/;"	f	typeref:typename:void	file:
+on_signal	test/step3.c	/^static void on_signal(int s){$/;"	f	typeref:typename:void	file:
+open	net.h	/^    int (*open)(struct net_device *dev);$/;"	m	struct:net_device_ops	typeref:typename:int (*)(struct net_device * dev)
+ops	net.h	/^    struct net_device_ops *ops;$/;"	m	struct:net_device	typeref:struct:net_device_ops *
+peer	net.h	/^        uint8_t peer[NET_DEVICE_ADDR_LEN];$/;"	m	union:net_device::__anon0ffedda2010a	typeref:typename:uint8_t[]
+poll	net.h	/^    int (*poll)(struct net_device *dev);$/;"	m	struct:net_device_ops	typeref:typename:int (*)(struct net_device * dev)
+priv	net.h	/^    void *priv;$/;"	m	struct:net_device	typeref:typename:void *
+protocols	net.c	/^static struct net_protocol *protocols;$/;"	v	typeref:struct:net_protocol *	file:
+queue	net.c	/^    struct queue_head queue; \/*input queue*\/$/;"	m	struct:net_protocol	typeref:struct:queue_head	file:
+queue_entry	util.c	/^struct queue_entry {$/;"	s	file:
+queue_foreach	util.c	/^queue_foreach(struct queue_head *queue, void (*func)(void *arg, void *data), void *arg)$/;"	f	typeref:typename:void
+queue_head	util.h	/^struct queue_head {$/;"	s
+queue_init	util.c	/^queue_init(struct queue_head *queue)$/;"	f	typeref:typename:void
+queue_peek	util.c	/^queue_peek(struct queue_head *queue)$/;"	f	typeref:typename:void *
+queue_pop	util.c	/^queue_pop(struct queue_head *queue)$/;"	f	typeref:typename:void *
+queue_push	util.c	/^queue_push(struct queue_head *queue, void *data)$/;"	f	typeref:typename:void *
+tail	util.h	/^    struct queue_entry *tail;$/;"	m	struct:queue_head	typeref:struct:queue_entry *
+tailof	util.h	/^#define tailof(/;"	d
+terminate	test/step1.c	/^static volatile sig_atomic_t terminate;$/;"	v	typeref:typename:volatile sig_atomic_t	file:
+terminate	test/step2.c	/^static volatile sig_atomic_t terminate;$/;"	v	typeref:typename:volatile sig_atomic_t	file:
+terminate	test/step3.c	/^static volatile sig_atomic_t terminate;$/;"	v	typeref:typename:volatile sig_atomic_t	file:
+test_data	test/test.h	/^const uint8_t test_data[] = {$/;"	v	typeref:typename:const uint8_t[]
+timespec_add_nsec	util.h	/^#define timespec_add_nsec(/;"	d
+timeval_add_usec	util.h	/^#define timeval_add_usec(/;"	d
+transmit	net.h	/^    int (*transmit)(struct net_device *dev, uint16_t type, const uint8_t *data, size_t len, cons/;"	m	struct:net_device_ops	typeref:typename:int (*)(struct net_device * dev,uint16_t type,const uint8_t * data,size_t len,const void * dst)
+type	net.c	/^    uint16_t type;$/;"	m	struct:net_protocol	typeref:typename:uint16_t	file:
+type	net.h	/^    uint16_t type; \/\/Unique id to distinguish each device$/;"	m	struct:net_device	typeref:typename:uint16_t
+warnf	util.h	/^#define warnf(/;"	d

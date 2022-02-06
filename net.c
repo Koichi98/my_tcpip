@@ -12,7 +12,7 @@ static struct net_device *devices;
 // Allocate memory for new device
 struct net_device* net_device_alloc(void){
     struct net_device* dev;
-    dev = calloc(1,sizeof(dev));
+    dev = calloc(1,sizeof(*dev));
     if(!dev){
         errorf("calloc() failure");
         return NULL;
@@ -27,7 +27,7 @@ int net_device_register(struct net_device *dev){
     snprintf(dev->name, sizeof(dev->name), "net%d", dev->index);
     dev->next = devices;
     devices = dev;
-    //infof("registered, dev=%s, type=0x%04x", dev->name, dev->type);
+    infof("registered, dev=%s, type=0x%04x", dev->name, dev->type);
     return 0;
 }
 
@@ -65,11 +65,11 @@ static int net_device_close(struct net_device *dev){
 
 int net_device_output(struct net_device *dev, uint16_t type, const uint8_t *data, size_t len, const void *dst){
     if(!NET_DEVICE_IS_UP(dev)){
-        errorf("not opened, dev=%s, len=%zu", dev, len);
+        errorf("not opened, dev=%s", dev->name);
         return -1;
     }
     if(len > dev->mtu){
-        errorf("too long, dev=%s, len=%zu", dev, len);
+        errorf("too long, dev=%s, mtu=%u, len=%zu", dev->name, dev->mtu, len);
         return -1;
     }
     debugf("dev=%s, type=0x%04x, len=%zu", dev->name, type, len);
@@ -94,6 +94,7 @@ int net_run(void){
             return -1;
         }
     }
+    debugf("running...");
     return 0;
 }
 
@@ -102,8 +103,10 @@ void net_shutdown(void){
     for(dev=devices;dev!=NULL;dev=dev->next){
         net_device_close(dev);
     }
+    debugf("shutdown");
 }
 
 int net_init(void){
+    /*do nothing*/
     return 0;
 }

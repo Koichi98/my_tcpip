@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE
+//#define _XOPEN_SOURCE
 
 #include <stdio.h>
 #include <stdint.h>
@@ -30,17 +30,19 @@ int main(int argc, char *argv[]){
     sigaction(SIGINT,sigact,NULL);*/
     signal(SIGINT,on_signal);
 
+    //errorf("net_init() failure");
     if(net_init()==-1){
         errorf("net_init() failure");
         return -1;
     }
+
     dev = null_init();
     if(!dev){
         errorf("null_init() failure");
         return -1;
     }
     
-    if(net_run()){
+    if(net_run()==-1){
         errorf("net_run() failure");
         return -1;
     }

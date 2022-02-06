@@ -20,6 +20,7 @@ static struct net_device_ops null_ops = {
 //Initialize "NULL DEVICE" by creating the "net_device" instance
 struct net_device* null_init(void){
     struct net_device *dev;
+
     dev = net_device_alloc();
     if(!dev){
         errorf("net_device_alloc() failure");

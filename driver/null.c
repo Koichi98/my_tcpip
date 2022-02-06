@@ -22,15 +22,15 @@ struct net_device* null_init(void){
     struct net_device *dev;
     dev = net_device_alloc();
     if(!dev){
-
+        errorf("net_device_alloc() failure");
+        return NULL;
     }
-
     dev->type = NET_DEVICE_TYPE_NULL;
     dev->mtu = NULL_MTU;
     dev->hlen = 0; /* non header */
     dev->alen = 0; /*non address*/
     dev->ops = &null_ops;
-    if(net_device_register(dev)){
+    if(net_device_register(dev) == -1){
         errorf("net_device_register() failure");
         return NULL;
     }

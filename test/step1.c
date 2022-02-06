@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 
 #include "util.h"
 #include "net.h"
@@ -22,7 +23,8 @@ int main(int argc, char *argv[]){
 
     struct net_device *dev;
 
-    /*struct sigaction* sigact;
+    /*struct sigaction* sigact; TODO::なぜか"Segmentation fault (コアダンプ)"が起きる
+    memset(&sigact, 0, sizeof(sigact));
     sigact->sa_handler = on_signal;
     sigact->sa_flags = 0; 
     sigaction(SIGINT,sigact,NULL);*/
@@ -32,7 +34,6 @@ int main(int argc, char *argv[]){
         errorf("net_init() failure");
         return -1;
     }
-
     dev = null_init();
     if(!dev){
         errorf("null_init() failure");

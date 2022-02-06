@@ -3,11 +3,28 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "util.h"
 #include "net.h"
+#include "ip.h"
+
+struct net_protocol {
+    struct net_protocol *next;
+    uint16_t type;
+    pthread_mutex_t mutex; /*mutex for input queue*/
+    struct queue_head queue; /*input queue*/
+    void (*handler)(const uint8_t *data, size_t len, struct net_device *dev);
+};
+
+/* NOTE: the data follows immediately after the structure */
+struct net_protocol_queue_entry {
+    struct net_device *dev;
+    size_t len;
+};
 
 static struct net_device *devices;
+static struct net_protocol *protocols;
 
 // Allocate memory for new device
 struct net_device* net_device_alloc(void){
@@ -82,8 +99,79 @@ int net_device_output(struct net_device *dev, uint16_t type, const uint8_t *data
 }
 
 int net_input_handler(uint16_t type, const uint8_t *data, size_t len, struct net_device *dev){
-    debugf("dev=%s, type=0x%04x, len=%zu", dev->name, type, len);
-    debugdump(data, len);
+    struct net_protocol* proto;
+    struct net_protocol_queue_entry* entry;
+    unsigned int num;
+
+
+
+    //Storing in the receive queue of the protocol
+    for(proto=protocols;proto!=NULL;proto=proto->next){
+        if(proto->type == type){
+            //Allocate memory for queue entries, including the data that follows
+            entry = calloc(1, sizeof(*entry) + len);
+            if(!entry){
+                errorf("calloc() failure");
+                return -1;
+            }
+
+            //Set the values for the entry.
+            entry->dev = dev;
+            entry->len = len;
+            memcpy(entry+1, data, len);
+
+            //Push the entry to the queue
+            pthread_mutex_lock(&proto->mutex);
+            if(!queue_push(&proto->queue,entry)){
+                pthread_mutex_unlock(&proto->mutex);
+                errorf("queue_push() failure");
+                free(entry);
+                return -1;
+            }
+
+            //Get the size of the queue after the entry is pushed 
+            num = proto->queue.num;
+            pthread_mutex_unlock(&proto->mutex);
+
+            debugf("queue pushed (num:%u), dev=%s, type=0x%04x, len=%zu", num, dev->name, type, len);
+            debugdump(data, len);
+            return 0;
+        }
+    }
+    /* unsupported protocol */
+    return 0;
+}
+
+int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, size_t len, struct net_device *dev)){
+    
+    //Check for duplicate registrations
+    struct net_protocol* proto;
+    for(proto=protocols;proto!=NULL;proto=proto->next){
+        if(proto->type == type){
+            errorf("protocol already registered, type=0x%04x", type);
+            return -1;
+        }
+    }
+
+    //Allocate memory for struct net_protocol
+    struct net_protocol* new_proto;
+    new_proto = calloc(1,sizeof(*new_proto));
+    if(!new_proto){
+        errorf("calloc() failure");
+        return -1;
+    }
+
+    //Set the values of the new protocol
+    new_proto->type = type;
+    pthread_mutex_init(&new_proto->mutex, NULL);
+    //queue_init(&new_proto->queue);
+    new_proto->handler = handler;
+
+    //Add to top of protocol list
+    new_proto->next = protocols;
+    protocols = new_proto;
+
+    infof("registered, type=0x%04x", type);
     return 0;
 }
 
@@ -107,6 +195,9 @@ void net_shutdown(void){
 }
 
 int net_init(void){
-    /*do nothing*/
+    if(ip_init() == -1){
+        errorf("ip_init() failure");
+        return -1;
+    }
     return 0;
 }

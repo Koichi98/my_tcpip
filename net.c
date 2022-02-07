@@ -4,10 +4,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include "util.h"
 #include "net.h"
 #include "ip.h"
+
+#define NET_THREAD_SLEEP_TIME 1000 /* micro seconds */
 
 struct net_protocol {
     struct net_protocol *next;
@@ -179,16 +182,45 @@ int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, si
 
 static void* net_thread(void* arg){
 
+    unsigned int count, num;
     struct net_device* dev;
-    //Polling for devices
-    for(dev=devices;dev!=NULL;dev=dev->next){
+    struct net_protocol* proto;
+    struct net_protocol_queue_entry* entry;
 
+    while(!terminate){
+
+        //Polling for devices
+        for(dev=devices;dev!=NULL;dev=dev->next){
+            if(dev->ops->poll){ // Skip if the polling function is not defined
+                if(dev->ops->poll(dev) == -1){ 
+                    count++;
+                }
+            }
+        }
+
+        //Data processing for receive queues of the protocols
+        for(proto=protocols;proto!=NULL;proto=proto->next){
+            pthread_mutex_lock(&proto->mutex);
+            entry = queue_pop(&proto->queue); //Take the entry from the protocol queue
+            num = proto->queue.num; //Queue size after the entry is popped 
+            pthread_mutex_unlock(&proto->mutex);
+            if(!entry){
+                continue;
+            }
+            debugf("queue popped (num:%u), dev=%s, type=0x%04x, len=%zd", num, entry->dev->name, proto->type, entry->len);
+            debugdump((uint8_t *)(entry+1), entry->len);
+
+            proto->handler((uint8_t*)(entry+1), entry->len, entry->dev);
+            free(entry);
+            count++;
+        }
+
+
+        //Avoid busy wait
+        if(!count){
+            usleep(NET_THREAD_SLEEP_TIME);
+        }
     }
-
-
-    //Data processing for receive queues of the protocols
-
-
 
     return NULL;
 }
@@ -206,6 +238,7 @@ int net_run(void){
     debugf("create background thread...");
 
     //Create the background thread to poll the receive queues of the protocols
+    terminate = 0;
     err = pthread_create(&thread, NULL, net_thread, NULL);
     if(err){
         errorf("pthread_create() failure, err=%d", err);

@@ -4,10 +4,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <signal.h>
+
 
 #include "util.h"
 #include "net.h"
 #include "ip.h"
+
+#define NET_THREAD_SLEEP_TIME 1000 /* micro seconds */
+
 
 struct net_protocol {
     struct net_protocol *next;
@@ -25,6 +30,9 @@ struct net_protocol_queue_entry {
 
 static struct net_device *devices;
 static struct net_protocol *protocols;
+
+static pthread_t thread;
+static volatile sig_atomic_t terminate;
 
 // Allocate memory for new device
 struct net_device* net_device_alloc(void){
@@ -174,12 +182,102 @@ int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, si
     return 0;
 }
 
+int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, size_t len, struct net_device *dev)){
+    
+    //Check for duplicate registrations
+    struct net_protocol* proto;
+    for(proto=protocols;proto!=NULL;proto=proto->next){
+        if(proto->type == type){
+            errorf("protocol already registered, type=0x%04x", type);
+            return -1;
+        }
+    }
+
+    //Allocate memory for struct net_protocol
+    struct net_protocol* new_proto;
+    new_proto = calloc(1,sizeof(*new_proto));
+    if(!new_proto){
+        errorf("calloc() failure");
+        return -1;
+    }
+
+    //Set the values of the new protocol
+    new_proto->type = type;
+    pthread_mutex_init(&new_proto->mutex, NULL);
+    //queue_init(&new_proto->queue);
+    new_proto->handler = handler;
+
+    //Add to top of protocol list
+    new_proto->next = protocols;
+    protocols = new_proto;
+
+    infof("registered, type=0x%04x", type);
+    return 0;
+}
+
+static void* net_thread(void* arg){
+
+    unsigned int count, num;
+    struct net_device* dev;
+    struct net_protocol* proto;
+    struct net_protocol_queue_entry* entry;
+
+    while(!terminate){
+
+        //Polling for devices
+        for(dev=devices;dev!=NULL;dev=dev->next){
+            if(dev->ops->poll){ // Skip if the polling function is not defined
+                if(dev->ops->poll(dev) == -1){ 
+                    count++;
+                }
+            }
+        }
+
+        //Data processing for receive queues of the protocols
+        for(proto=protocols;proto!=NULL;proto=proto->next){
+            pthread_mutex_lock(&proto->mutex);
+            entry = queue_pop(&proto->queue); //Take the entry from the protocol queue
+            num = proto->queue.num; //Queue size after the entry is popped 
+            pthread_mutex_unlock(&proto->mutex);
+            if(!entry){
+                continue;
+            }
+            debugf("queue popped (num:%u), dev=%s, type=0x%04x, len=%zd", num, entry->dev->name, proto->type, entry->len);
+            debugdump((uint8_t *)(entry+1), entry->len);
+
+            proto->handler((uint8_t*)(entry+1), entry->len, entry->dev);
+            free(entry);
+            count++;
+        }
+
+
+        //Avoid busy wait
+        if(!count){
+            usleep(NET_THREAD_SLEEP_TIME);
+        }
+    }
+
+    return NULL;
+}
+
 int net_run(void){
     struct net_device* dev;
+    int err;
+
+    //Open all registered devices
     for(dev=devices;dev!=NULL;dev=dev->next){
         if(net_device_open(dev) == -1){
             return -1;
         }
+    }
+    debugf("create background thread...");
+
+    //Create the background thread to poll the receive queues of the protocols
+    terminate = 0;
+    err = pthread_create(&thread, NULL, net_thread, NULL);
+    if(err){
+        errorf("pthread_create() failure, err=%d", err);
+        return -1;
     }
     debugf("running...");
     return 0;
@@ -187,6 +285,16 @@ int net_run(void){
 
 void net_shutdown(void){
     struct net_device* dev;
+    int err;
+
+    debugf("terminate background thread...");
+    terminate = 1;
+    err = pthread_join(thread, NULL);
+    if(err){
+        errorf("pthread_join() failure, err=%d", err);
+        return;
+    }
+    debugf("close all devices...");
     for(dev=devices;dev!=NULL;dev=dev->next){
         net_device_close(dev);
     }

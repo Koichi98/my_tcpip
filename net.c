@@ -26,6 +26,9 @@ struct net_protocol_queue_entry {
 static struct net_device *devices;
 static struct net_protocol *protocols;
 
+static pthread_t thread;
+static volatile sig_atomic_t terminate;
+
 // Allocate memory for new device
 struct net_device* net_device_alloc(void){
     struct net_device* dev;
@@ -174,12 +177,39 @@ int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, si
     return 0;
 }
 
+static void* net_thread(void* arg){
+
+    struct net_device* dev;
+    //Polling for devices
+    for(dev=devices;dev!=NULL;dev=dev->next){
+
+    }
+
+
+    //Data processing for receive queues of the protocols
+
+
+
+    return NULL;
+}
+
 int net_run(void){
     struct net_device* dev;
+    int err;
+
+    //Open all registered devices
     for(dev=devices;dev!=NULL;dev=dev->next){
         if(net_device_open(dev) == -1){
             return -1;
         }
+    }
+    debugf("create background thread...");
+
+    //Create the background thread to poll the receive queues of the protocols
+    err = pthread_create(&thread, NULL, net_thread, NULL);
+    if(err){
+        errorf("pthread_create() failure, err=%d", err);
+        return -1;
     }
     debugf("running...");
     return 0;
@@ -187,6 +217,16 @@ int net_run(void){
 
 void net_shutdown(void){
     struct net_device* dev;
+    int err;
+
+    debugf("terminate background thread...");
+    terminate = 1;
+    err = pthread_join(thread, NULL);
+    if(err){
+        errorf("pthread_join() failure, err=%d", err);
+        return;
+    }
+    debugf("close all devices...");
     for(dev=devices;dev!=NULL;dev=dev->next){
         net_device_close(dev);
     }

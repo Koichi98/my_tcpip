@@ -6,11 +6,13 @@
 #include <pthread.h>
 #include <signal.h>
 
+
 #include "util.h"
 #include "net.h"
 #include "ip.h"
 
 #define NET_THREAD_SLEEP_TIME 1000 /* micro seconds */
+
 
 struct net_protocol {
     struct net_protocol *next;
@@ -144,6 +146,39 @@ int net_input_handler(uint16_t type, const uint8_t *data, size_t len, struct net
         }
     }
     /* unsupported protocol */
+    return 0;
+}
+
+int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, size_t len, struct net_device *dev)){
+    
+    //Check for duplicate registrations
+    struct net_protocol* proto;
+    for(proto=protocols;proto!=NULL;proto=proto->next){
+        if(proto->type == type){
+            errorf("protocol already registered, type=0x%04x", type);
+            return -1;
+        }
+    }
+
+    //Allocate memory for struct net_protocol
+    struct net_protocol* new_proto;
+    new_proto = calloc(1,sizeof(*new_proto));
+    if(!new_proto){
+        errorf("calloc() failure");
+        return -1;
+    }
+
+    //Set the values of the new protocol
+    new_proto->type = type;
+    pthread_mutex_init(&new_proto->mutex, NULL);
+    //queue_init(&new_proto->queue);
+    new_proto->handler = handler;
+
+    //Add to top of protocol list
+    new_proto->next = protocols;
+    protocols = new_proto;
+
+    infof("registered, type=0x%04x", type);
     return 0;
 }
 

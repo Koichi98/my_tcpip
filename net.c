@@ -88,6 +88,32 @@ static int net_device_close(struct net_device *dev){
     return 0;
 }
 
+int net_device_add_iface(struct net_device *dev, struct net_iface *iface){
+    struct net_iface *entry;
+
+    //To make it simple, duplicate registration is not allowed.
+    for(entry = dev->ifaces; entry != NULL; entry = entry->next){
+        if(entry->family == iface->family){
+            errorf("already exists, dev=%s, family=%d", dev->name, entry->family);
+            return -1;
+        }
+    }
+    iface->dev = dev;
+
+    // TODO Exercise : デバイスのインタフェースリストの先頭にifaceを挿入
+
+    return 0;
+}
+
+struct net_iface* net_device_get_iface(struct net_device *dev, int family){
+    /*TODO
+    Exercise : デバイスに紐づくインタフェースを検索
+・デバイスのインタフェースリスト（dev->ifaces）を巡回
+　・family が一致するインタフェースを返す
+・合致するインタフェースを発見できなかったら NULL を返す */
+
+}
+
 int net_device_output(struct net_device *dev, uint16_t type, const uint8_t *data, size_t len, const void *dst){
     if(!NET_DEVICE_IS_UP(dev)){
         errorf("not opened, dev=%s", dev->name);

@@ -26,6 +26,8 @@ struct ip_hdr {
 const ip_addr_t IP_ADDR_ANY = 0x00000000; /* 0.0.0.0 */
 const ip_addr_t IP_ADDR_BROADCAST = 0xffffffff; /* 255.255.255.255 */
 
+static struct ip_iface *ifaces;  /* NOTE: if you want to add/delete the entries after net_run(), you need to protect this list with a mutex. */
+
 //Converts the IP address from string to network-ordered integer.
 int ip_addr_pton(const char *p, ip_addr_t *n){
     char *sp, *ep;
@@ -89,11 +91,65 @@ void ip_dump(const uint8_t *data, size_t len){
     funlockfile(stderr);
 }
 
+struct ip_iface* ip_iface_alloc(const char *unicast, const char *netmask){
+    struct ip_iface *iface;
+    
+    iface = calloc(1,sizeof(*iface));
+    if(!iface){
+        errorf("calloc() failure");
+        return NULL;
+    }
+
+    NET_IFACE(iface)->family = NET_IFACE_FAMILY_IP;
+
+    /*TODO
+     Exercise : IPインタフェースにアドレス情報を設定
+(1) iface->unicast : 引数 unicast を文字列からバイナリ値へ変換して設定する
+　・変換に失敗した場合はエラーを返す
+(2) iface->netmask : 引数 netmask を文字列からバイナリ値へ変換して設定する
+　・変換に失敗した場合はエラーを返す
+(3) iface->broadcast : iface->unicast と iface->netmask の値から算出して設定する
+    */
+
+   return iface;
+}
+
+
+/* NOTE: must not be called after net_run() */
+int ip_iface_register(struct net_device *dev, struct ip_iface *iface){
+    char addr1[IP_ADDR_STR_LEN];
+    char addr2[IP_ADDR_STR_LEN];
+    char addr3[IP_ADDR_STR_LEN];
+
+    /*TODO
+     Exercise : IPインタフェースの登録
+(1) デバイスにIPインタフェース（iface）を登録する
+　・エラーが返されたらこの関数もエラーを返す
+(2) IPインタフェースのリスト（ifaces）の先頭に iface を挿入する
+    */
+
+    infof("registered: dev=%s, unicast=%s, netmask=%s, broadcast=%s", dev->name,
+        ip_addr_ntop(iface->unicast, addr1, sizeof(addr1)),
+        ip_addr_ntop(iface->netmask, addr2, sizeof(addr2)),
+        ip_addr_ntop(iface->broadcast, addr3, sizeof(addr3)));
+    return 0;
+}
+
+struct ip_iface* ip_iface_select(ip_addr_t addr){
+    /*TODO
+     Exercise : IPインタフェースの検索
+・インタフェースリスト（ifaces）を巡回
+　・引数 addr で指定されたIPアドレスを持つインタフェースを返す
+・合致するインタフェースを発見できなかったら NULL を返す
+    */
+}
 
 static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
 
     struct ip_hdr *hdr;
     uint16_t offset;
+    struct ip_iface *iface;
+    char addr[IP_ADDR_STR_LEN];
 
     // Error if the length of the input data is shorter then the minimum size of the IP Header
     if(len < IP_HDR_SIZE_MIN){        
@@ -140,6 +196,17 @@ static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
         errorf("fragments does not support");
         return;
     }
+
+    /*
+     Exercise : IPデータグラムのフィルタリング
+(1) デバイスに紐づくIPインタフェースを取得
+　・IPインタフェースを取得できなかったらエラーメッセージを出力して中断する
+(2) 宛先IPアドレスの検証
+　・以下のいずれにも一致しない場合は「他ホスト宛」と判断して中断する（エラーメッセージは出力しない）
+　　a. インタフェースのIPアドレス
+　　b. ブロードキャストIPアドレス（255.255.255.255）
+　　c. インタフェースが属するサブネットのブロードキャストIPアドレス（xxx.xxx.xxx.255）
+    */
 
     //Debug Output
     debugf("dev=%s, protocol=%u, total=%u", dev->name, hdr->protocol, total);

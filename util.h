@@ -1,5 +1,6 @@
 #ifndef UTIL_H
 #define UTIL_H
+//#define HEXDUMP
 
 #include <stdio.h>
 #include <stdint.h>

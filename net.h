@@ -54,7 +54,7 @@ struct net_device_ops {
     int (*poll)(struct net_device *dev);
 };
 
-extern struct net_device *
+extern struct net_device*
 net_device_alloc(void);
 extern int
 net_device_register(struct net_device *dev);

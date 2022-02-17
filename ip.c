@@ -232,7 +232,6 @@ static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
 static int ip_output_device(struct ip_iface *iface, const uint8_t *data, size_t len, ip_addr_t dst){
     uint8_t hwaddr[NET_DEVICE_ADDR_LEN] = {};
 
-    printf("len:%d\n",len);
     if(NET_IFACE(iface)->dev->flags & NET_DEVICE_FLAG_NEED_ARP){
         if(dst == iface->broadcast || dst == IP_ADDR_BROADCAST){
             memcpy(hwaddr, NET_IFACE(iface)->dev->broadcast, NET_IFACE(iface)->dev->alen);
@@ -260,18 +259,15 @@ static ssize_t ip_output_core(struct ip_iface *iface, uint8_t protocol, const ui
 
     hdr = (struct ip_hdr*)buf;
     hlen = IP_HDR_SIZE_MIN;
-    total = IP_HDR_SIZE_MIN + len;
+    total = hton16(IP_HDR_SIZE_MIN + len); // Convert to Network Byte Order
 
-
-    //TODO:Consider Byte Order
     hdr->vhl = (IP_VERSION_IPV4 << 4) | (hlen >> 2); // Header length is expressed in 32bit units
     hdr->tos = 0;
     hdr->total = total;
-    printf("total:%d\n",total);
-    hdr->id = id;
+    hdr->id = hton16(id); // Convert to Network Byte Order
     hdr->offset = 0;
-    hdr->ttl= 0;
-    hdr->protocol = (uint8_t)NET_PROTOCOL_TYPE_IP;
+    hdr->ttl= 255;
+    hdr->protocol = protocol;
     hdr->sum = 0; // Since address area of "sum" will also be used to calculate checksum with cksum16()
     hdr->src = src;
     hdr->dst = dst;

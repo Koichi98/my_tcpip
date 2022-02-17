@@ -52,6 +52,8 @@ static int setup(void){
         errorf("net_run() failure");
         return -1;
     }
+
+    return 0;
 }
 
 static void cleanup(void){
@@ -62,6 +64,7 @@ static void cleanup(void){
 int main(int argc, char *argv[]){
 
     ip_addr_t src, dst;
+    // Since we create IP Header ourselves, we should omit IP Header of test_data:test.h
     size_t offset = IP_HDR_SIZE_MIN;
 
     /*struct sigaction* sigact; TODO::なぜか"Segmentation fault (コアダンプ)"が起きる

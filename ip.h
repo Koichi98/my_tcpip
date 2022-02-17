@@ -44,4 +44,6 @@ extern ssize_t ip_output(uint8_t protocol, const uint8_t *data, size_t len, ip_a
 
 extern int ip_init(void);
 
+typedef uint32_t ip_addr_t;
+
 #endif

@@ -7,6 +7,8 @@
 
 #include "net.h"
 
+#include "net.h"
+
 #define IP_VERSION_IPV4 4
 
 #define IP_HDR_SIZE_MIN 20
@@ -35,6 +37,7 @@ struct ip_iface{
     ip_addr_t netmask;
     ip_addr_t broadcast;
 };
+
 
 extern int ip_addr_pton(const char *p, ip_addr_t* n);
 

@@ -53,7 +53,7 @@ int ip_addr_pton(const char *p, ip_addr_t *n){
 }
 
 //Converts the IP address from network-ordered integer to string.
-char * ip_addr_ntop(const ip_addr_t n, char *p, size_t size){
+char* ip_addr_ntop(const ip_addr_t n, char *p, size_t size){
 
     uint8_t *u8;
 
@@ -229,9 +229,113 @@ static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
     debugf("dev=%s, iface=%s, protocol=%u, total=%u", dev->name, ip_addr_ntop(iface->unicast, addr, sizeof(addr)), hdr->protocol, total);
     ip_dump(data, total);
 
-
 }
 
+static int ip_output_device(struct ip_iface *iface, const uint8_t *data, size_t len, ip_addr_t dst){
+    uint8_t hwaddr[NET_DEVICE_ADDR_LEN] = {};
+
+    if(NET_IFACE(iface)->dev->flags & NET_DEVICE_FLAG_NEED_ARP){
+        if(dst == iface->broadcast || dst == IP_ADDR_BROADCAST){
+            memcpy(hwaddr, NET_IFACE(iface)->dev->broadcast, NET_IFACE(iface)->dev->alen);
+        }else{
+            errorf("arp does not implement");
+            return -1;
+        }
+    }
+
+    int ret = net_device_output(NET_IFACE(iface)->dev, NET_PROTOCOL_TYPE_IP, data, len, NULL);
+    if(ret < 0){
+        errorf("net_device_output() failure");
+        return -1;
+    }
+
+    return ret;
+}
+
+// Create IP datagram and call ip_output_device()
+static ssize_t ip_output_core(struct ip_iface *iface, uint8_t protocol, const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, uint16_t id, uint16_t offset){
+    uint8_t buf[IP_TOTAL_SIZE_MAX];
+    struct ip_hdr *hdr;
+    uint16_t hlen, total;
+    char addr[IP_ADDR_STR_LEN];
+
+    hdr = (struct ip_hdr*)buf;
+    hlen = IP_HDR_SIZE_MIN;
+    total = hton16(IP_HDR_SIZE_MIN + len); // Convert to Network Byte Order
+
+    hdr->vhl = (IP_VERSION_IPV4 << 4) | (hlen >> 2); // Header length is expressed in 32bit units
+    hdr->tos = 0;
+    hdr->total = total;
+    hdr->id = hton16(id); // Convert to Network Byte Order
+    hdr->offset = 0;
+    hdr->ttl= 255;
+    hdr->protocol = protocol;
+    hdr->sum = 0; // Since address area of "sum" will also be used to calculate checksum with cksum16()
+    hdr->src = src;
+    hdr->dst = dst;
+    hdr->sum = cksum16((uint16_t*)hdr, hlen, 0);
+
+    memcpy(hdr+1,data,len);
+
+    debugf("dev=%s, iface=%s, protocol=%u, len=%u", NET_IFACE(iface)->dev->name, ip_addr_ntop(dst, addr, sizeof(addr)), protocol, total);
+    ip_dump(buf, total);
+
+    // Pass the created IP datagram to the actual function of the device to output
+    return ip_output_device(iface, buf, total, dst);
+}
+
+static uint16_t ip_generate_id(void){
+    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    static uint16_t id = 128;
+    uint16_t ret;
+
+    pthread_mutex_lock(&mutex);
+    ret = id++;
+    pthread_mutex_unlock(&mutex);
+    return ret;
+}
+
+// Takeout the interface corresponding to source destination and call ip_output_core()
+ssize_t ip_output(uint8_t protocol, const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst){
+    struct ip_iface *iface;
+    char addr[IP_ADDR_STR_LEN];
+    uint16_t id;
+
+    if(src == IP_ADDR_ANY){
+        errorf("rounting does not implement");
+        return -1;
+    }else{
+        // Look for IP interface corresponding to source IP address
+        iface = ip_iface_select(src);
+        if(iface == NULL){
+            errorf("interface not found for given source address");
+            return -1;
+        }
+
+        // Check if dst is broadcast ip address, or if dst is included in the interface network address
+        ip_addr_t netmask = iface->netmask;
+        if((dst != IP_ADDR_BROADCAST ) && ((~(dst ^ src)&netmask) != netmask )){ /* if (dst != broadcast ip address) and (dst and src doesn't match in the netmask range)*/
+            errorf("cannot reach the destination");
+            return -1;
+        }
+    }
+
+    // Give an error if the size of the data is bigger than the mtu since fragmentation is not supported.
+    if(NET_IFACE(iface)->dev->mtu < IP_HDR_SIZE_MIN + len){
+        errorf("too long, dev=%s, mtu=%u < %zu", NET_IFACE(iface)->dev->name, NET_IFACE(iface)->dev->mtu, IP_HDR_SIZE_MIN + len);
+        return -1;
+    }
+
+    // Call the function to create and output the datagram
+    id = ip_generate_id();
+    if(ip_output_core(iface, protocol, data, len, iface->unicast, dst, id, 0) == -1){
+        errorf("ip_outout_core() failure");
+        return -1;
+    }
+
+    return len;
+
+}
 
 int ip_init(void){
     //Register IP input functions in the protocol stack

@@ -10,6 +10,7 @@
 #include "util.h"
 #include "net.h"
 #include "ip.h"
+#include "icmp.h"
 
 #define NET_THREAD_SLEEP_TIME 1000 /* micro seconds */
 
@@ -303,8 +304,13 @@ void net_shutdown(void){
 }
 
 int net_init(void){
-    if(ip_init() == -1){
+    if(ip_init()<0){
         errorf("ip_init() failure");
+        return -1;
+    }
+
+    if(icmp_init()<0){
+        errorf("icmp_init() failure");
         return -1;
     }
     return 0;

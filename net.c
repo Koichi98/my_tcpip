@@ -88,6 +88,40 @@ static int net_device_close(struct net_device *dev){
     return 0;
 }
 
+int net_device_add_iface(struct net_device *dev, struct net_iface *iface){
+    struct net_iface *entry;
+
+    //To make it simple, duplicate registration is not allowed.
+    for(entry = dev->ifaces; entry != NULL; entry = entry->next){
+        if(entry->family == iface->family){
+            errorf("already exists, dev=%s, family=%d", dev->name, entry->family);
+            return -1;
+        }
+    }
+    iface->dev = dev;
+
+    // Add to the head of the interfaces list
+    iface->next = dev->ifaces;
+    dev->ifaces = iface;
+
+    return 0;
+}
+
+struct net_iface* net_device_get_iface(struct net_device *dev, int family){
+    struct net_iface *iface;
+
+    for(iface=dev->ifaces;iface!=NULL;iface=iface->next){
+        if(family == iface->family){
+            // Return the pointer to the matching interface
+            return iface;
+        }
+    }
+
+    // Return NULL if the matching interface doesn't exist
+    return NULL;
+
+}
+
 int net_device_output(struct net_device *dev, uint16_t type, const uint8_t *data, size_t len, const void *dst){
     if(!NET_DEVICE_IS_UP(dev)){
         errorf("not opened, dev=%s", dev->name);
@@ -174,40 +208,7 @@ int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, si
     //queue_init(&new_proto->queue);
     new_proto->handler = handler;
 
-    //Add to top of protocol list
-    new_proto->next = protocols;
-    protocols = new_proto;
-
-    infof("registered, type=0x%04x", type);
-    return 0;
-}
-
-int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, size_t len, struct net_device *dev)){
-    
-    //Check for duplicate registrations
-    struct net_protocol* proto;
-    for(proto=protocols;proto!=NULL;proto=proto->next){
-        if(proto->type == type){
-            errorf("protocol already registered, type=0x%04x", type);
-            return -1;
-        }
-    }
-
-    //Allocate memory for struct net_protocol
-    struct net_protocol* new_proto;
-    new_proto = calloc(1,sizeof(*new_proto));
-    if(!new_proto){
-        errorf("calloc() failure");
-        return -1;
-    }
-
-    //Set the values of the new protocol
-    new_proto->type = type;
-    pthread_mutex_init(&new_proto->mutex, NULL);
-    //queue_init(&new_proto->queue);
-    new_proto->handler = handler;
-
-    //Add to top of protocol list
+    //Add to the head of the protocol list
     new_proto->next = protocols;
     protocols = new_proto;
 

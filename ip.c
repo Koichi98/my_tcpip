@@ -245,7 +245,7 @@ static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
         }
     }
     /* unsupported protocol */
-
+  
 }
 
 static int ip_output_device(struct ip_iface *iface, const uint8_t *data, size_t len, ip_addr_t dst){

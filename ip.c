@@ -23,10 +23,18 @@ struct ip_hdr {
     uint8_t options[0];
 };
 
+// Structure for managing higher-level protocols of IP.
+struct ip_protocol {
+    struct ip_protocol* next;
+    uint8_t type;
+    void (*handler)(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct ip_iface *iface);
+};
+
 const ip_addr_t IP_ADDR_ANY = 0x00000000; /* 0.0.0.0 */
 const ip_addr_t IP_ADDR_BROADCAST = 0xffffffff; /* 255.255.255.255 */
 
 static struct ip_iface *ifaces;  /* NOTE: if you want to add/delete the entries after net_run(), you need to protect this list with a mutex. */
+static struct ip_protocol *protocols; // List of registered protocols
 
 //Converts the IP address from string to network-ordered integer.
 int ip_addr_pton(const char *p, ip_addr_t *n){
@@ -229,6 +237,15 @@ static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
     debugf("dev=%s, iface=%s, protocol=%u, total=%u", dev->name, ip_addr_ntop(iface->unicast, addr, sizeof(addr)), hdr->protocol, total);
     ip_dump(data, total);
 
+    struct ip_protocol* proto;
+    for(proto=protocols;proto!=NULL;proto=proto->next){
+        if(hdr->protocol == proto->type){
+            proto->handler((uint8_t*)(hdr+1), total-hl, hdr->src, hdr->dst, iface); 
+            return;
+        }
+    }
+    /* unsupported protocol */
+  
 }
 
 static int ip_output_device(struct ip_iface *iface, const uint8_t *data, size_t len, ip_addr_t dst){
@@ -335,6 +352,38 @@ ssize_t ip_output(uint8_t protocol, const uint8_t *data, size_t len, ip_addr_t s
 
     return len;
 
+}
+
+// Create ip_protocol structure and add it to the protocols list
+/* NOTE: must not be called after net_run() */
+int ip_protocol_register(uint8_t type, void (*handler)(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct ip_iface *iface)){
+    struct ip_protocol *proto;
+
+    // Check for duplicate registration
+    for(proto=protocols;proto!=NULL;proto=proto->next){
+        if(type == proto->type){
+            errorf("protocol already exists");
+            return -1;
+        }
+    }
+
+    // Allocate memory
+    proto = calloc(1,sizeof(*proto));
+    if(!proto){
+        errorf("calloc() failure");
+        return -1;
+    }
+
+    // Set values for the ip_protocol structure
+    proto->type = type;
+    proto->handler = handler;
+
+    // Add to the head of the IP protocols list
+    proto->next = protocols;
+    protocols = proto;
+
+    infof("registered, type=%u", proto->type);
+    return 0;
 }
 
 int ip_init(void){

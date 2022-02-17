@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "net.h"
+
 #define IP_VERSION_IPV4 4
 
 #define IP_HDR_SIZE_MIN 20
@@ -26,5 +28,15 @@ struct ip_iface{
     ip_addr_t netmask;
     ip_addr_t broadcast;
 };
+
+extern char* ip_addr_ntop(const ip_addr_t n, char *p, size_t size);
+
+extern struct ip_iface* ip_iface_alloc(const char *addr, const char *network);
+
+extern int ip_iface_register(struct net_device *dev, struct ip_iface *iface);
+
+extern struct ip_iface* ip_iface_select(ip_addr_t addr);
+
+extern int ip_init(void);
 
 #endif

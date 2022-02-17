@@ -8,8 +8,10 @@
 
 #include "util.h"
 #include "net.h"
+#include "ip.h"
 #include "driver/loopback.h"
 #include "test.h"
+
 
 static volatile sig_atomic_t terminate;
 
@@ -51,7 +53,7 @@ int main(int argc, char *argv[]){
     }
 
     //Register IP Interface
-    if(ip_Iface_register(dev, iface) == -1){
+    if(ip_iface_register(dev, iface) == -1){
         errorf("ip_iface_register() failure");
         return -1;
     }

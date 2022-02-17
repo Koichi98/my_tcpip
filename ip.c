@@ -102,16 +102,22 @@ struct ip_iface* ip_iface_alloc(const char *unicast, const char *netmask){
 
     NET_IFACE(iface)->family = NET_IFACE_FAMILY_IP;
 
-    /*TODO
-     Exercise : IPインタフェースにアドレス情報を設定
-(1) iface->unicast : 引数 unicast を文字列からバイナリ値へ変換して設定する
-　・変換に失敗した場合はエラーを返す
-(2) iface->netmask : 引数 netmask を文字列からバイナリ値へ変換して設定する
-　・変換に失敗した場合はエラーを返す
-(3) iface->broadcast : iface->unicast と iface->netmask の値から算出して設定する
-    */
+    //Set iface->unicast while converting it from String to Binary
+    if(ip_addr_pton(unicast,&iface->unicast)<0){
+        errorf("ip_addr_pton() failure: unicast");
+        return NULL;
+    }
 
-   return iface;
+    //Set iface->netmask while converting it from String to Binary
+    if(ip_addr_pton(netmask,&iface->netmask)<0){
+        errorf("ip_addr_pton() failure: netmask");
+        return NULL;
+    }
+
+    //Set iface->broadcast 
+    iface->broadcast = (iface->unicast & iface->netmask) | (~iface->netmask);
+
+    return iface;
 }
 
 
@@ -121,27 +127,35 @@ int ip_iface_register(struct net_device *dev, struct ip_iface *iface){
     char addr2[IP_ADDR_STR_LEN];
     char addr3[IP_ADDR_STR_LEN];
 
-    /*TODO
-     Exercise : IPインタフェースの登録
-(1) デバイスにIPインタフェース（iface）を登録する
-　・エラーが返されたらこの関数もエラーを返す
-(2) IPインタフェースのリスト（ifaces）の先頭に iface を挿入する
-    */
+    // Register the interface to the device
+    if(net_device_add_iface(dev,(struct net_iface*)iface)<0){
+        errorf("net_device_add_iface() failure");
+        return -1;
+    }
+
+    // Add to the head of the IP interfaces list
+    iface->next = ifaces;
+    ifaces = iface;
 
     infof("registered: dev=%s, unicast=%s, netmask=%s, broadcast=%s", dev->name,
         ip_addr_ntop(iface->unicast, addr1, sizeof(addr1)),
         ip_addr_ntop(iface->netmask, addr2, sizeof(addr2)),
         ip_addr_ntop(iface->broadcast, addr3, sizeof(addr3)));
+
     return 0;
 }
 
 struct ip_iface* ip_iface_select(ip_addr_t addr){
-    /*TODO
-     Exercise : IPインタフェースの検索
-・インタフェースリスト（ifaces）を巡回
-　・引数 addr で指定されたIPアドレスを持つインタフェースを返す
-・合致するインタフェースを発見できなかったら NULL を返す
-    */
+    struct ip_iface* iface;
+    for(iface=ifaces;iface!=NULL;iface=iface->next){
+        if(addr == iface->unicast){
+            // Return the pointer to the matching interface
+            return iface;
+        }
+    }
+
+    // Return NULL if the matching interface doesn't exist
+    return NULL;
 }
 
 static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
@@ -197,20 +211,21 @@ static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
         return;
     }
 
-    /*
-     Exercise : IPデータグラムのフィルタリング
-(1) デバイスに紐づくIPインタフェースを取得
-　・IPインタフェースを取得できなかったらエラーメッセージを出力して中断する
-(2) 宛先IPアドレスの検証
-　・以下のいずれにも一致しない場合は「他ホスト宛」と判断して中断する（エラーメッセージは出力しない）
-　　a. インタフェースのIPアドレス
-　　b. ブロードキャストIPアドレス（255.255.255.255）
-　　c. インタフェースが属するサブネットのブロードキャストIPアドレス（xxx.xxx.xxx.255）
-    */
+    iface = (struct ip_iface*)(net_device_get_iface(dev,NET_IFACE_FAMILY_IP));
+
+    if(iface == NULL){
+       errorf("interface not found");
+       return;
+    }
+
+    if((hdr->dst != iface->unicast) && (hdr->dst != iface->netmask) && (hdr->dst != iface->broadcast)){
+        // To other destination
+        return;
+    }
 
     //Debug Output
-    debugf("dev=%s, protocol=%u, total=%u", dev->name, hdr->protocol, total);
-    ip_dump(data, len);
+    debugf("dev=%s, iface=%s, protocol=%u, total=%u", dev->name, ip_addr_ntop(iface->unicast, addr, sizeof(addr)), hdr->protocol, total);
+    ip_dump(data, total);
 
 }
 

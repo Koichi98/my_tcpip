@@ -100,17 +100,25 @@ int net_device_add_iface(struct net_device *dev, struct net_iface *iface){
     }
     iface->dev = dev;
 
-    // TODO Exercise : デバイスのインタフェースリストの先頭にifaceを挿入
+    // Add to the head of the interfaces list
+    iface->next = dev->ifaces;
+    dev->ifaces = iface;
 
     return 0;
 }
 
 struct net_iface* net_device_get_iface(struct net_device *dev, int family){
-    /*TODO
-    Exercise : デバイスに紐づくインタフェースを検索
-・デバイスのインタフェースリスト（dev->ifaces）を巡回
-　・family が一致するインタフェースを返す
-・合致するインタフェースを発見できなかったら NULL を返す */
+    struct net_iface *iface;
+
+    for(iface=dev->ifaces;iface!=NULL;iface=iface->next){
+        if(family == iface->family){
+            // Return the pointer to the matching interface
+            return iface;
+        }
+    }
+
+    // Return NULL if the matching interface doesn't exist
+    return NULL;
 
 }
 
@@ -200,40 +208,7 @@ int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, si
     //queue_init(&new_proto->queue);
     new_proto->handler = handler;
 
-    //Add to top of protocol list
-    new_proto->next = protocols;
-    protocols = new_proto;
-
-    infof("registered, type=0x%04x", type);
-    return 0;
-}
-
-int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, size_t len, struct net_device *dev)){
-    
-    //Check for duplicate registrations
-    struct net_protocol* proto;
-    for(proto=protocols;proto!=NULL;proto=proto->next){
-        if(proto->type == type){
-            errorf("protocol already registered, type=0x%04x", type);
-            return -1;
-        }
-    }
-
-    //Allocate memory for struct net_protocol
-    struct net_protocol* new_proto;
-    new_proto = calloc(1,sizeof(*new_proto));
-    if(!new_proto){
-        errorf("calloc() failure");
-        return -1;
-    }
-
-    //Set the values of the new protocol
-    new_proto->type = type;
-    pthread_mutex_init(&new_proto->mutex, NULL);
-    //queue_init(&new_proto->queue);
-    new_proto->handler = handler;
-
-    //Add to top of protocol list
+    //Add to the head of the protocol list
     new_proto->next = protocols;
     protocols = new_proto;
 

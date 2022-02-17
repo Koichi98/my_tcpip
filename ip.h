@@ -39,4 +39,6 @@ extern struct ip_iface* ip_iface_select(ip_addr_t addr);
 
 extern int ip_init(void);
 
+typedef uint32_t ip_addr_t;
+
 #endif

@@ -158,12 +158,14 @@ struct ip_iface* ip_iface_select(ip_addr_t addr){
     return NULL;
 }
 
+
 static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
 
     struct ip_hdr *hdr;
     uint16_t offset;
     struct ip_iface *iface;
     char addr[IP_ADDR_STR_LEN];
+
 
     // Error if the length of the input data is shorter then the minimum size of the IP Header
     if(len < IP_HDR_SIZE_MIN){        
@@ -226,6 +228,7 @@ static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
     //Debug Output
     debugf("dev=%s, iface=%s, protocol=%u, total=%u", dev->name, ip_addr_ntop(iface->unicast, addr, sizeof(addr)), hdr->protocol, total);
     ip_dump(data, total);
+
 
 }
 

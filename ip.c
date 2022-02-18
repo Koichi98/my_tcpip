@@ -240,7 +240,7 @@ static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
     struct ip_protocol* proto;
     for(proto=protocols;proto!=NULL;proto=proto->next){
         if(hdr->protocol == proto->type){
-            proto->handler((uint8_t*)(hdr+1), total-hl, hdr->src, hdr->dst, iface); 
+            proto->handler((uint8_t*)(hdr+1), total-hlen, hdr->src, hdr->dst, iface); 
             return;
         }
     }
@@ -278,11 +278,11 @@ static ssize_t ip_output_core(struct ip_iface *iface, uint8_t protocol, const ui
 
     hdr = (struct ip_hdr*)buf;
     hlen = IP_HDR_SIZE_MIN;
-    total = hton16(IP_HDR_SIZE_MIN + len); // Convert to Network Byte Order
+    total = IP_HDR_SIZE_MIN + len; // Convert to Network Byte Order
 
     hdr->vhl = (IP_VERSION_IPV4 << 4) | (hlen >> 2); // Header length is expressed in 32bit units
     hdr->tos = 0;
-    hdr->total = total;
+    hdr->total = hton16(total);
     hdr->id = hton16(id); // Convert to Network Byte Order
     hdr->offset = 0;
     hdr->ttl= 255;
@@ -292,7 +292,7 @@ static ssize_t ip_output_core(struct ip_iface *iface, uint8_t protocol, const ui
     hdr->dst = dst;
     hdr->sum = cksum16((uint16_t*)hdr, hlen, 0);
 
-    memcpy(hdr+1,data,len);
+    memcpy(hdr+1, data, len);
 
     debugf("dev=%s, iface=%s, protocol=%u, len=%u", NET_IFACE(iface)->dev->name, ip_addr_ntop(dst, addr, sizeof(addr)), protocol, total);
     ip_dump(buf, total);

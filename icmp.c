@@ -8,6 +8,7 @@
 
 #define ICMP_BUFSIZE IP_PAYLOAD_SIZE_MAX
 
+
 // ICMP Header (Message-specific fields are treated as 32bit value.)
 struct icmp_hdr{
     uint8_t type;

@@ -49,7 +49,7 @@ struct net_device{
         uint8_t broadcast[NET_DEVICE_ADDR_LEN];
     };
     struct net_device_ops *ops;
-    void *priv;
+    void *priv; // Private data used in driver internally 
 };
 
 /* Network Interface */

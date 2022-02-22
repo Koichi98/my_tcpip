@@ -12,6 +12,10 @@ $ ping 192.0.2.2
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+//#define _XOPEN_SOURCE
+
+#include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>

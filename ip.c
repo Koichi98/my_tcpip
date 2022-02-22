@@ -389,7 +389,7 @@ int ip_protocol_register(uint8_t type, void (*handler)(const uint8_t *data, size
 int ip_init(void){
     //Register IP input functions in the protocol stack
     if(net_protocol_register(NET_PROTOCOL_TYPE_IP, ip_input) == -1){
-        errorf("net_protocol_register failure");
+        errorf("net_protocol_register() failure");
         return -1;
     }
     return 0;

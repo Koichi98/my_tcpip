@@ -7,10 +7,11 @@ $ ping 192.0.2.2
 
 */
 
-//#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
@@ -93,12 +94,12 @@ static void cleanup(void){
 
 int main(int argc, char *argv[]){
 
-    /*struct sigaction* sigact; TODO::なぜか"Segmentation fault (コアダンプ)"が起きる
-    memset(&sigact, 0, sizeof(sigact));
+    struct sigaction* sigact; 
+    sigact = calloc(1,sizeof(*sigact));
     sigact->sa_handler = on_signal;
     sigact->sa_flags = 0; 
-    sigaction(SIGINT,sigact,NULL);*/
-    signal(SIGINT,on_signal);
+    sigaction(SIGINT,sigact,NULL);
+    //signal(SIGINT,on_signal);
 
     if(setup() == -1){
         errorf("setup() failure");

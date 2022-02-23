@@ -6,6 +6,7 @@
 #include <sys/time.h>
 
 
+
 #include "util.h"
 #include "net.h"
 #include "ether.h"
@@ -51,6 +52,7 @@ struct arp_cache{
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct arp_cache caches[ARP_CACHE_SIZE];
+
 
 static char* arp_opcode_ntoa(uint16_t opcode){
     switch(ntoh16(opcode)){
@@ -189,6 +191,7 @@ static void arp_cache_delete(struct arp_cache *cache){
     timerclear(&cache->timestamp);
 }
 
+
 // Create reply frame and call net_device_output()
 static int arp_reply(struct net_iface *iface, const uint8_t *tha, ip_addr_t tpa, const uint8_t *dst){
     struct arp_hdr* hdr;
@@ -223,6 +226,7 @@ static void arp_input(const uint8_t *data, size_t len, struct net_device *dev){
     ip_addr_t spa,tpa;
     int merge = 0;
 
+
     if(len < sizeof(*msg)){
         errorf("too short");
         return;
@@ -231,7 +235,7 @@ static void arp_input(const uint8_t *data, size_t len, struct net_device *dev){
     msg = (struct arp_ether*)data;
     hdr = (struct arp_hdr*)msg;
 
-    // Check if each type and length of the device
+    // Check the type and length of the device and the protocol
     if(ntoh16(hdr->hrd) != ARP_HRD_ETHER || hdr->hln != ETHER_ADDR_LEN){
         return;
     }

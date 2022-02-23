@@ -8,6 +8,7 @@
 #include "util.h"
 #include "net.h"
 #include "ip.h"
+#include "arp.h"
 
 struct ip_hdr {
     uint8_t vhl; // Version(4bit) and IP Header(4bit)
@@ -250,23 +251,20 @@ static void ip_input(const uint8_t *data, size_t len, struct net_device *dev){
 
 static int ip_output_device(struct ip_iface *iface, const uint8_t *data, size_t len, ip_addr_t dst){
     uint8_t hwaddr[NET_DEVICE_ADDR_LEN] = {};
+    int ret;
 
     if(NET_IFACE(iface)->dev->flags & NET_DEVICE_FLAG_NEED_ARP){
         if(dst == iface->broadcast || dst == IP_ADDR_BROADCAST){
+            // Set the device level broadcast address for "hwaddr", if ip level has broadcacst address for "dst".
             memcpy(hwaddr, NET_IFACE(iface)->dev->broadcast, NET_IFACE(iface)->dev->alen);
         }else{
-            errorf("arp does not implement");
-            return -1;
+            ret = arp_resolve((struct net_iface*)iface, dst, hwaddr);
+            if(ret != ARP_RESOLVE_FOUND){
+                return ret;                
+            }
         }
     }
-
-    int ret = net_device_output(NET_IFACE(iface)->dev, NET_PROTOCOL_TYPE_IP, data, len, NULL);
-    if(ret < 0){
-        errorf("net_device_output() failure");
-        return -1;
-    }
-
-    return ret;
+    return net_device_output(NET_IFACE(iface)->dev, NET_PROTOCOL_TYPE_IP, data, len, hwaddr);
 }
 
 // Create IP datagram and call ip_output_device()

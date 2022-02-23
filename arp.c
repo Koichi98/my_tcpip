@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <pthread.h>
+#include <sys/time.h>
 
 
 #include "util.h"
@@ -16,6 +18,13 @@
 
 #define ARP_OP_REQUEST 1
 #define ARP_OP_REPLY 2
+
+#define ARP_CACHE_SIZE 32
+
+#define ARP_CACHE_STATE_FREE       0
+#define ARP_CACHE_STATE_INCOMPLETE 1
+#define ARP_CACHE_STATE_RESOLVED   2
+#define ARP_CACHE_STATE_STATIC     3 
 
 struct arp_hdr{
     uint16_t hrd;
@@ -32,6 +41,16 @@ struct arp_ether{
     uint8_t tha[ETHER_ADDR_LEN];
     uint8_t tpa[IP_ADDR_LEN];
 };
+
+struct arp_cache{
+    unsigned char state;
+    ip_addr_t pa;
+    uint8_t ha[ETHER_ADDR_LEN];
+    struct timeval timestamp;
+};
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static struct arp_cache caches[ARP_CACHE_SIZE];
 
 static char* arp_opcode_ntoa(uint16_t opcode){
     switch(ntoh16(opcode)){
@@ -67,6 +86,109 @@ static void arp_dump(const uint8_t *data, size_t len){
     funlockfile(stderr);
 }
 
+/*
+    ARP Cache
+
+    NOTE: ARP Cache functions must be called after mutex locked
+*/
+
+static struct arp_cache* arp_cache_alloc(void){
+    struct arp_cache *entry, *oldest = NULL;
+
+    for(entry=caches;entry<tailof(caches);entry++){
+        // Look for unused (FREE) entry
+        if(entry->state == ARP_CACHE_STATE_FREE){
+            return entry;
+        }
+        // Look for the oldest entry simultaneously in case when FREE entry doesn't exist.
+        if(!oldest || timercmp(&oldest->timestamp, &entry->timestamp, >)){
+            oldest = entry;
+        }
+    }
+    
+    return oldest;
+}
+
+// Return a arp_cache entry with a matching IP address
+static struct arp_cache* arp_cache_select(ip_addr_t pa){
+    struct arp_cache *cache;
+    for(cache=caches;cache<tailof(caches);cache++){
+        if(cache->state != ARP_CACHE_STATE_FREE){
+            // Having the same IP address
+            if(cache->pa == pa){
+                return cache;
+            }
+        }
+    }
+    return NULL;
+}
+
+// Update the cache entry
+static struct arp_cache* arp_cache_update(ip_addr_t pa, const uint8_t *ha){
+    struct arp_cache *cache;
+    char addr1[IP_ADDR_STR_LEN];
+    char addr2[ETHER_ADDR_STR_LEN];
+
+
+    cache = arp_cache_select(pa);
+
+    // If cache is not found, return NULL.
+    if(!cache){
+        return NULL;
+    }
+
+    // Update the cache information 
+    cache->state = ARP_CACHE_STATE_RESOLVED;
+    cache->pa = pa;
+    memcpy(cache->ha, ha, sizeof(uint8_t) * ETHER_ADDR_LEN);
+    if(gettimeofday(&cache->timestamp,NULL)<0){ // TODO:gettimeofday() isn't recommended. Use clock_gettime()
+        errorf("gettimeofday() failure");
+        return NULL;
+    }
+
+    debugf("UPDATE: pa=%s, ha=%s", ip_addr_ntop(pa, addr1, sizeof(addr1)), ether_addr_ntop(ha, addr2, sizeof(addr2)));
+    return cache;
+}
+
+static struct arp_cache* arp_cache_insert(ip_addr_t pa, const uint8_t *ha){
+    struct arp_cache* cache; 
+    char addr1[IP_ADDR_STR_LEN];
+    char addr2[ETHER_ADDR_STR_LEN];
+
+    // Allcate the cache entry
+    cache = arp_cache_alloc();
+    if(!cache){
+        errorf("arp_cache_alloc() failure");
+        return NULL;
+    }
+
+    // Set the value of the cache entry
+    cache->state = ARP_CACHE_STATE_RESOLVED;
+    cache->pa = pa;
+    memcpy(cache->ha, ha, sizeof(uint8_t) * ETHER_ADDR_LEN);
+    if(gettimeofday(&cache->timestamp,NULL)<0){ // TODO:gettimeofday() isn't recommended. Use clock_gettime()
+        errorf("gettimeofday() failure");
+        return NULL;
+    }
+
+    debugf("INSERT: pa=%s, ha=%s", ip_addr_ntop(pa, addr1, sizeof(addr1)), ether_addr_ntop(ha, addr2, sizeof(addr2)));
+    return cache;
+}
+
+
+static void arp_cache_delete(struct arp_cache *cache){
+    char addr1[IP_ADDR_STR_LEN];
+    char addr2[ETHER_ADDR_STR_LEN];
+
+    debugf("DELETE: pa=%s, ha=%s", ip_addr_ntop(cache->pa, addr1, sizeof(addr1)), ether_addr_ntop(cache->ha, addr2, sizeof(addr2)));
+
+    // Delete the cache entry.
+    cache->state = ARP_CACHE_STATE_FREE;
+    cache->pa = 0;
+    memset(cache->ha, 0, sizeof(uint8_t) * ETHER_ADDR_LEN);
+    timerclear(&cache->timestamp);
+}
+
 // Create reply frame and call net_device_output()
 static int arp_reply(struct net_iface *iface, const uint8_t *tha, ip_addr_t tpa, const uint8_t *dst){
     struct arp_hdr* hdr;
@@ -83,10 +205,10 @@ static int arp_reply(struct net_iface *iface, const uint8_t *tha, ip_addr_t tpa,
     hdr->op = ntoh16(ARP_OP_REPLY);
 
     // Set the value for arp_ether other than arp_hdr
-    memcpy(reply->sha, iface->dev->addr, ETHER_ADDR_LEN);
-    memcpy(reply->spa, &((struct ip_iface*)iface)->unicast, IP_ADDR_LEN);
-    memcpy(reply->tha, tha, ETHER_ADDR_LEN);
-    memcpy(reply->tpa, &tpa, IP_ADDR_LEN);
+    memcpy(reply->sha, iface->dev->addr, sizeof(uint8_t) * ETHER_ADDR_LEN);
+    memcpy(reply->spa, &((struct ip_iface*)iface)->unicast, sizeof(uint8_t) * IP_ADDR_LEN);
+    memcpy(reply->tha, tha, sizeof(uint8_t) * ETHER_ADDR_LEN);
+    memcpy(reply->tpa, &tpa, sizeof(uint8_t) * IP_ADDR_LEN);
 
     debugf("dev=%s, len=%zu", iface->dev->name, sizeof(*reply));
     arp_dump((uint8_t*)reply, sizeof(*reply));
@@ -99,6 +221,7 @@ static void arp_input(const uint8_t *data, size_t len, struct net_device *dev){
     struct arp_hdr* hdr;
     struct ip_iface* iface;
     ip_addr_t spa,tpa;
+    int merge = 0;
 
     if(len < sizeof(*msg)){
         errorf("too short");
@@ -108,10 +231,10 @@ static void arp_input(const uint8_t *data, size_t len, struct net_device *dev){
     msg = (struct arp_ether*)data;
     hdr = (struct arp_hdr*)msg;
 
+    // Check if each type and length of the device
     if(ntoh16(hdr->hrd) != ARP_HRD_ETHER || hdr->hln != ETHER_ADDR_LEN){
         return;
     }
-
     if(ntoh16(hdr->pro) != ARP_PRO_IP || hdr->pln != IP_ADDR_LEN){
         return;
     }
@@ -123,9 +246,21 @@ static void arp_input(const uint8_t *data, size_t len, struct net_device *dev){
     memcpy(&spa, msg->spa, sizeof(spa));
     memcpy(&tpa, msg->tpa, sizeof(tpa));
 
-    char addr[32];
-    ip_addr_ntop(iface->unicast,addr,32);
+    pthread_mutex_lock(&mutex);
+    if(arp_cache_update(spa,msg->sha)){
+        /* updated */
+        merge = 1;
+    }
+    pthread_mutex_unlock(&mutex);
+
     if(iface && iface->unicast == tpa){
+        // Register as a new cache entry if it is not updated.
+        if(!merge){
+            pthread_mutex_lock(&mutex);
+            arp_cache_insert(spa, msg->sha);
+            pthread_mutex_unlock(&mutex);
+        }
+        // Send reply message if the operation type is "Request"
         if(ntoh16(hdr->op) == ARP_OP_REQUEST){
             int ret;
             ret = arp_reply((struct net_iface*)iface, msg->sha, spa, msg->sha);
@@ -135,6 +270,37 @@ static void arp_input(const uint8_t *data, size_t len, struct net_device *dev){
         }
     }
 
+}
+
+// Set the hardware address corresponding to the IP address to "ha".
+int arp_resolve(struct net_iface *iface, ip_addr_t pa, uint8_t *ha){
+    struct arp_cache* cache;
+    char addr1[IP_ADDR_STR_LEN];
+    char addr2[ETHER_ADDR_STR_LEN];
+
+    // Check the device type and protocol type to make sure 
+    if(iface->dev->type != NET_DEVICE_TYPE_ETHERNET){
+        debugf("unsupported hardware address type");
+        return ARP_RESOLVE_ERROR;
+    }
+    if(iface->family != NET_IFACE_FAMILY_IP){
+        debugf("unsupported protocol address type");
+        return ARP_RESOLVE_ERROR;
+    }
+
+    pthread_mutex_lock(&mutex);
+    cache = arp_cache_select(pa);
+    if(!cache){
+        pthread_mutex_unlock(&mutex);
+        debugf("cache not found, pa=%s", ip_addr_ntop(pa, addr1, sizeof(addr1)));
+        return ARP_RESOLVE_INCOMPLETE;
+    }
+
+    memcpy(ha, cache->ha, ETHER_ADDR_LEN);
+    pthread_mutex_unlock(&mutex);
+
+    debugf("resolved, pa=%s, ha=%s", ip_addr_ntop(pa, addr1, sizeof(addr1)), ether_addr_ntop(ha, addr2, sizeof(addr2)));
+    return ARP_RESOLVE_FOUND;
 }
 
 int arp_init(void){

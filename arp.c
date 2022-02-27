@@ -191,6 +191,31 @@ static void arp_cache_delete(struct arp_cache *cache){
     timerclear(&cache->timestamp);
 }
 
+// Create the arp request message and call net_device_output()
+static int arp_request(struct net_iface* iface, ip_addr_t tpa){
+    struct arp_ether* request;
+    struct arp_hdr* hdr;
+
+    request = calloc(1,sizeof(*request));
+    hdr = (struct arp_hdr*)request;
+
+    // Set the value for arp_hdr
+    hdr->hrd = ntoh16(ARP_HRD_ETHER);
+    hdr->pro = ntoh16(ARP_PRO_IP);
+    hdr->hln = ETHER_ADDR_LEN;
+    hdr->pln = IP_ADDR_LEN;
+    hdr->op = ntoh16(ARP_OP_REQUEST);
+
+    // Set the value for arp_ether other than arp_hdr
+    memcpy(request->sha, iface->dev->addr, sizeof(uint8_t) * ETHER_ADDR_LEN);
+    memcpy(request->spa, &((struct ip_iface*)iface)->unicast, sizeof(uint8_t) * IP_ADDR_LEN);
+    memset(request->tha, 0 , sizeof(uint8_t) * ETHER_ADDR_LEN); /* Set 0 for "tha", since we don't know and are requesting this value. */
+    memcpy(request->tpa, &tpa, sizeof(uint8_t) * IP_ADDR_LEN);
+
+    debugf("dev=%s, len=%zu", iface->dev->name, sizeof(*request));
+    arp_dump((uint8_t *)request, sizeof(*request));
+    return net_device_output(iface->dev, ETHER_TYPE_ARP, (uint8_t*)request, sizeof(*request), iface->dev->broadcast);
+}
 
 // Create reply frame and call net_device_output()
 static int arp_reply(struct net_iface *iface, const uint8_t *tha, ip_addr_t tpa, const uint8_t *dst){
@@ -295,10 +320,31 @@ int arp_resolve(struct net_iface *iface, ip_addr_t pa, uint8_t *ha){
     pthread_mutex_lock(&mutex);
     cache = arp_cache_select(pa);
     if(!cache){
+        // Allocate a new entry and set the value ( Will be completed by arp_cache_update() in arp_input())
+        cache = arp_cache_alloc();
+        if(!cache){
+            errorf("arp_cache_alloc() failure");
+            return -1;
+        }
+        cache->state = ARP_CACHE_STATE_INCOMPLETE;
+        cache->pa = pa;
+        if(gettimeofday(&cache->timestamp,NULL)<0){ // TODO:gettimeofday() isn't recommended. Use clock_gettime()
+            errorf("gettimeofday() failure");
+            return NULL;
+        }
+        arp_request(iface, pa);
         pthread_mutex_unlock(&mutex);
         debugf("cache not found, pa=%s", ip_addr_ntop(pa, addr1, sizeof(addr1)));
         return ARP_RESOLVE_INCOMPLETE;
     }
+
+    // If the found entry is INCOMPLETE, do arp_request() again just in case there was packet loss.
+    if(cache->state == ARP_CACHE_STATE_INCOMPLETE){
+        arp_request(iface, pa);
+        pthread_mutex_unlock(&mutex);
+        return ARP_RESOLVE_INCOMPLETE;
+    }
+
 
     memcpy(ha, cache->ha, ETHER_ADDR_LEN);
     pthread_mutex_unlock(&mutex);

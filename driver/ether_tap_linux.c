@@ -87,7 +87,12 @@ static int ether_tap_close(struct net_device *dev){
 }
 
 static ssize_t ether_tap_write(struct net_device *dev, const uint8_t *frame, size_t flen){
-    return write(PRIV(dev)->fd, frame, flen);
+    int ret;
+    ret = write(PRIV(dev)->fd, frame, flen);
+    if (ret<0){
+        errorf("write: %s, dev=%s", strerror(errno), dev->name);
+    }
+    return ret;
 }
 
 int ether_tap_transmit(struct net_device *dev, uint16_t type, const uint8_t *buf, size_t len, const void *dst){

@@ -345,6 +345,7 @@ int arp_resolve(struct net_iface *iface, ip_addr_t pa, uint8_t *ha){
         return ARP_RESOLVE_INCOMPLETE;
     }
 
+
     memcpy(ha, cache->ha, ETHER_ADDR_LEN);
     pthread_mutex_unlock(&mutex);
 

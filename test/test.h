@@ -8,7 +8,8 @@
 
 #define ETHER_TAP_NAME    "tap0"
 #define ETHER_TAP_HW_ADDR "00:00:5e:00:53:01"
-#define ETHER_TAP_IP_ADDR "157.82.207.83"
+#define ETHER_TAP_IP_ADDR "192.168.2.5"
+
 
 
 #define ETHER_TAP_NETMASK "255.255.255.0"

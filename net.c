@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/time.h>
 
 
 #include "util.h"
@@ -29,6 +30,37 @@ struct net_protocol_queue_entry {
     struct net_device *dev;
     size_t len;
 };
+
+struct net_timer{
+    struct net_timer* next;
+    struct timeval interval;
+    struct timeval last;
+    void (*handler)(void);
+};
+
+static struct net_timer *timers;
+
+// Create the net_timer and add to the head of the "timers"
+int net_timer_register(struct timeval interval, void (*handler)(void)){
+    struct net_timer* timer;
+    timer = calloc(1, sizeof(*timer));
+    if(!timer){
+        return -1;
+    }
+
+    // Set the value
+    timer->interval = interval;
+    if(gettimeofday(&timer->last,NULL)<0){ // TODO:gettimeofday() isn't recommended. Use clock_gettime()
+    errorf("gettimeofday() failure");
+    return -1;
+    }
+    timer->handler = handler;
+
+    timer->next = timers;
+    timers = timer;
+
+    return 0;
+}
 
 static struct net_device *devices;
 static struct net_protocol *protocols;
@@ -224,6 +256,8 @@ static void* net_thread(void* arg){
     struct net_device* dev;
     struct net_protocol* proto;
     struct net_protocol_queue_entry* entry;
+    struct net_timer *timer;
+    struct timeval now, diff;
 
     while(!terminate){
 
@@ -251,6 +285,17 @@ static void* net_thread(void* arg){
             proto->handler((uint8_t*)(entry+1), entry->len, entry->dev);
             free(entry);
             count++;
+        }
+
+        // Checking "timers" list
+        for(timer=timers;timer!=NULL;timer=timer->next){
+            gettimeofday(&now, NULL);
+            timersub(&now, &timer->last, &diff);
+            if(timercmp(&timer->interval, &diff, <) != 0){
+                timer->handler();
+                gettimeofday(&timer->last, NULL);
+                count++;
+            }
         }
 
 

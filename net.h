@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/time.h>
 
 #ifndef NET_H
 #define NET_H
@@ -75,6 +76,7 @@ extern struct net_iface* net_device_get_iface(struct net_device *dev, int family
 extern int net_device_output(struct net_device *dev, uint16_t type, const uint8_t *data, size_t len, const void *dst);
 extern int net_input_handler(uint16_t type, const uint8_t *data, size_t len, struct net_device *dev);
 extern int net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, size_t len, struct net_device *dev));
+extern int net_timer_register(struct timeval interval, void (*handler)(void));
 
 
 

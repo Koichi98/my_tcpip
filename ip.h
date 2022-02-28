@@ -40,19 +40,17 @@ struct ip_iface{
 
 
 extern int ip_addr_pton(const char *p, ip_addr_t* n);
-
 extern char* ip_addr_ntop(const ip_addr_t n, char *p, size_t size);
 
 extern struct ip_iface* ip_iface_alloc(const char *addr, const char *network);
-
 extern int ip_iface_register(struct net_device *dev, struct ip_iface *iface);
-
 extern struct ip_iface* ip_iface_select(ip_addr_t addr);
 
+extern int ip_route_set_default_gateway(struct ip_iface* iface, const char *gateway);
+extern struct ip_iface* ip_route_get_iface(ip_addr_t dst);
+
 extern ssize_t ip_output(uint8_t protocol, const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst);
-
 extern int ip_protocol_register(uint8_t type, void (*handler)(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct ip_iface *iface));
-
 extern int ip_init(void);
 
 typedef uint32_t ip_addr_t;

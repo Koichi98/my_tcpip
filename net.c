@@ -13,6 +13,7 @@
 #include "ip.h"
 #include "icmp.h"
 #include "arp.h"
+#include "udp.h"
 
 #define NET_THREAD_SLEEP_TIME 1000 /* micro seconds */
 
@@ -364,5 +365,11 @@ int net_init(void){
         errorf("arp_init() failure");
         return -1;
     }
+
+    if(udp_init()<0){
+        errorf("udp_init() failure");
+        return -1;
+    }
+
     return 0;
 }

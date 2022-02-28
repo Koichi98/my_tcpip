@@ -17,6 +17,8 @@ TESTS = test/step0.exe \
     	test/step14.exe \
     	test/step15.exe \
     	test/step16.exe \
+    	test/step17.exe \
+
 
 
 
@@ -31,6 +33,7 @@ OBJS = util.o \
 	   icmp.o \
 	   ether.o \
 	   arp.o \
+	   udp.o \
 
 CFLAGS := $(CFLAGS) -g -W -Wall -Wno-unused-parameter -I .
 

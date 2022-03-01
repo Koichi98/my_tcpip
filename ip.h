@@ -26,9 +26,10 @@
 #define IP_PROTOCOL_UDP  17
 
 
-extern int ip_init(void);
-
 typedef uint32_t ip_addr_t;
+
+extern ip_addr_t IP_ADDR_ANY; /* 0.0.0.0 */
+extern ip_addr_t IP_ADDR_BROADCAST; /* 255.255.255.255 */
 
 struct ip_iface{
     struct net_iface iface;

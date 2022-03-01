@@ -41,6 +41,19 @@ struct net_timer{
 
 static struct net_timer *timers;
 
+struct net_interrupt_ctx {
+    struct net_interrupt_ctx *prev;
+    struct net_interrupt_ctx *next;
+    int occurred;
+};
+
+static struct {
+    struct net_interrupt_ctx *head;
+    pthread_mutex_t mutex;
+} interrupts;
+
+static volatile sig_atomic_t interrupted;
+
 // Create the net_timer and add to the head of the "timers"
 int net_timer_register(struct timeval interval, void (*handler)(void)){
     struct net_timer* timer;
@@ -259,6 +272,7 @@ static void* net_thread(void* arg){
     struct net_protocol_queue_entry* entry;
     struct net_timer *timer;
     struct timeval now, diff;
+    struct net_interrupt_ctx *ctx;
 
     while(!terminate){
 
@@ -299,6 +313,16 @@ static void* net_thread(void* arg){
             }
         }
 
+        // Execute ctx->occured = 1 to each ctx if net_interrupt() is called.
+        if (interrupted) {
+            debugf("interrupt occurred");
+            pthread_mutex_lock(&interrupts.mutex);
+            for (ctx = interrupts.head; ctx; ctx = ctx->next) {
+                ctx->occurred = 1;
+            }
+            pthread_mutex_unlock(&interrupts.mutex);
+            interrupted = 0;
+        }
 
         //Avoid busy wait
         if(!count){
@@ -308,6 +332,53 @@ static void* net_thread(void* arg){
 
     return NULL;
 }
+
+void net_interrupt(void){
+    interrupted = 1;
+}
+
+struct net_interrupt_ctx* net_interrupt_subscribe(void){
+    struct net_interrupt_ctx *ctx;
+
+    ctx = calloc(1, sizeof(struct net_interrupt_ctx));
+    if (!ctx) {
+        errorf("calloc() failure");
+        return NULL;
+    }
+    pthread_mutex_lock(&interrupts.mutex);
+    if (interrupts.head) {
+        ctx->next = interrupts.head;
+        interrupts.head->prev = ctx;
+    }
+    interrupts.head = ctx;
+    pthread_mutex_unlock(&interrupts.mutex);
+    return ctx;
+}
+
+int net_interrupt_occurred(struct net_interrupt_ctx *ctx){
+    int occurred;
+
+    pthread_mutex_lock(&interrupts.mutex);
+    occurred = ctx->occurred;
+    pthread_mutex_unlock(&interrupts.mutex);
+    return occurred;
+}
+
+int net_interrupt_unsubscribe(struct net_interrupt_ctx *ctx){
+    pthread_mutex_lock(&interrupts.mutex);
+    if (interrupts.head == ctx) {
+        interrupts.head = ctx->next;
+    }
+    if (ctx->next) {
+        ctx->next->prev = ctx->prev;
+    }
+    if (ctx->prev) {
+        ctx->prev->next = ctx->next;
+    }
+    pthread_mutex_unlock(&interrupts.mutex);
+    return 0;
+}
+
 
 int net_run(void){
     struct net_device* dev;

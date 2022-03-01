@@ -39,8 +39,8 @@ struct ip_route{
     struct ip_iface* iface;
 };
 
-const ip_addr_t IP_ADDR_ANY = 0x00000000; /* 0.0.0.0 */
-const ip_addr_t IP_ADDR_BROADCAST = 0xffffffff; /* 255.255.255.255 */
+ip_addr_t IP_ADDR_ANY = 0x00000000; /* 0.0.0.0 */
+ip_addr_t IP_ADDR_BROADCAST = 0xffffffff; /* 255.255.255.255 */
 
 static struct ip_iface *ifaces;  /* NOTE: if you want to add/delete the entries after net_run(), you need to protect this list with a mutex. */
 static struct ip_protocol *protocols; // List of registered protocols

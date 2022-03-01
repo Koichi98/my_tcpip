@@ -346,6 +346,7 @@ ssize_t udp_sendto(int id, uint8_t *data, size_t len, struct udp_endpoint *forei
     struct udp_endpoint local;
     struct ip_iface* iface;
     char addr[IP_ADDR_STR_LEN];
+    uint32_t p;
 
     pthread_mutex_lock(&mutex);
     pcb = udp_pcb_get(id);
@@ -364,8 +365,20 @@ ssize_t udp_sendto(int id, uint8_t *data, size_t len, struct udp_endpoint *forei
 
     // If the local port is not set, output an error
     if(!pcb->local.port){
-        errorf("local port is required");
-        return -1;
+        for(p=UDP_SOURCE_PORT_MIN;p<UDP_SOURCE_PORT_MAX;p++){
+            if(!udp_pcb_select(local.addr, hton16(p))){
+                    pcb->local.port = hton16(p);
+                    debugf("dinamic assign local port, port=%d", p);
+                    break;
+            }
+        }
+
+        // Give an error if there is no port usable
+        if(!pcb->local.port){
+            debugf("failed to dinamic assign local port, addr=%s", ip_addr_ntop(local.addr, addr, sizeof(addr)));
+            pthread_mutex_unlock(&mutex);
+            return -1;         
+        }
     }
     local.port = pcb->local.port;
     pthread_mutex_unlock(&mutex);

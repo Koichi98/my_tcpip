@@ -194,6 +194,7 @@ static struct udp_queue_entry* udp_pcb_queue_pop(struct udp_pcb *pcb){
     return entry;
 }
 
+
 static void udp_input(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct ip_iface *iface){
     struct pseudo_hdr pseudo;    
     uint16_t psum = 0;
@@ -202,6 +203,7 @@ static void udp_input(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t 
     char addr2[IP_ADDR_STR_LEN];
     struct udp_pcb *pcb;
     struct udp_queue_entry *entry;
+
 
 
     if(len < sizeof(*hdr)){
@@ -283,6 +285,7 @@ ssize_t udp_output(struct udp_endpoint *src, struct udp_endpoint *dst, const  ui
     hdr->len = hton16(total);
     hdr->sum = 0;
     memcpy(hdr+1, data, len);
+
     hdr->sum = cksum16((uint16_t*)hdr, total, psum);
 
     debugf("%s => %s, len=%zu (payload=%zu)", udp_endpoint_ntop(src, ep1, sizeof(ep1)), udp_endpoint_ntop(dst, ep2, sizeof(ep2)), total, len);
@@ -413,6 +416,7 @@ ssize_t udp_recvfrom(int id, uint8_t *buf, size_t size, struct udp_endpoint *for
     free(entry);
     return len;
 }
+
 
 int udp_init(void){
     if(ip_protocol_register(IP_PROTOCOL_UDP, udp_input)<0){

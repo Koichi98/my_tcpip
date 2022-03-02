@@ -12,7 +12,7 @@
 
 #define ETHER_TAP_NETMASK "255.255.255.0"
 
-#define DEFAULT_GATEWAY "192.168.2.155"
+#define DEFAULT_GATEWAY "192.168.128.34"
 
 const uint8_t test_data[] = {
     0x45, 0x00, 0x00, 0x30,

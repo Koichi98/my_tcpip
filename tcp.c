@@ -592,7 +592,6 @@ static void tcp_segment_arrives(struct tcp_segment_info *seg, uint8_t flags, uin
                 }
                 break;
         }
-
     /*
      * 8th, check the FIN bit
      */

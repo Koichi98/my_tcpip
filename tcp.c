@@ -556,6 +556,7 @@ static void tcp_segment_arrives(struct tcp_segment_info *seg, uint8_t flags, uin
                     pcb->snd.una = seg->ack;
                     tcp_retransmit_queue_cleanup(pcb);
 
+
                     /* ignore: Users should receive positive acknowledgments for buffers
                                 which have been SENT and fully acknowledged (i.e., SEND buffer should be returned with "ok" response) */
                     if (pcb->snd.wl1 < seg->seq || (pcb->snd.wl1 == seg->seq && pcb->snd.wl2 <= seg->ack)) {

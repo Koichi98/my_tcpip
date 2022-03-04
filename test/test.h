@@ -8,11 +8,12 @@
 
 #define ETHER_TAP_NAME    "tap0"
 #define ETHER_TAP_HW_ADDR "00:00:5e:00:53:01"
-#define ETHER_TAP_IP_ADDR "192.168.128.5"
+//#define ETHER_TAP_IP_ADDR "192.168.128.5"
+#define ETHER_TAP_IP_ADDR "192.0.2.2"
 
 #define ETHER_TAP_NETMASK "255.255.255.0"
 
-#define DEFAULT_GATEWAY "192.168.128.34"
+#define DEFAULT_GATEWAY "192.0.2.1"
 
 const uint8_t test_data[] = {
     0x45, 0x00, 0x00, 0x30,

@@ -242,7 +242,7 @@ static void udp_input(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t 
         pthread_mutex_unlock(&mutex);
         return;
     }
-
+    hexdump(stderr, hdr+1, len-sizeof(*hdr));
     entry = calloc(1, sizeof(*entry) + len - sizeof(*hdr)); // Size of entry structure and data itself
     entry->foreign.addr = src;
     entry->foreign.port = hdr->src;

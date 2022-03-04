@@ -8,6 +8,7 @@ $ ping 192.0.2.2
 */
 
 #define _XOPEN_SOURCE
+#define HEXDUMP
 
 #include <stdio.h>
 #include <stdint.h>
@@ -21,6 +22,7 @@ $ ping 192.0.2.2
 #include "ip.h"
 #include "icmp.h"
 #include "udp.h"
+#include "dns.h"
 #include "driver/loopback.h"
 #include "driver/ether_tap.h"
 #include "test.h"
@@ -102,10 +104,11 @@ static void cleanup(void){
 }
 
 
+
+
 int main(int argc, char *argv[]){
-    int soc;
-    struct udp_endpoint foreign;
-    uint8_t buf[1024];
+    uint8_t str[1024];
+    struct my_hostent* hostent;
 
     struct sigaction* sigact; 
     sigact = calloc(1,sizeof(*sigact));
@@ -118,22 +121,7 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    soc = udp_open();
-    if (soc == -1) {
-        errorf("udp_open() failure");
-        return -1;
-    }
-    udp_endpoint_pton("157.82.207.84:10007", &foreign);
-    while (!terminate) {
-        if (!fgets((char *)buf, sizeof(buf), stdin)) {
-            break;
-        }
-        if (udp_sendto(soc, buf, strlen((char *)buf), &foreign) == -1) {
-            errorf("udp_sendto() failure");
-            break;
-        }
-    }
-    udp_close(soc);
+    hostent = my_gethostbyname("example.com");
     
     cleanup();
     return 0;

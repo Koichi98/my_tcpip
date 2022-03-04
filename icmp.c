@@ -111,7 +111,7 @@ void icmp_input(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, s
                 dst = iface->unicast;
             }
             // Swap the source(src) and destination(dst).
-            icmp_output(ICMP_TYPE_ECHOREPLY, hdr->code, hdr->values, data, len - ICMP_HDR_SIZE, dst, src);
+            icmp_output(ICMP_TYPE_ECHOREPLY, hdr->code, hdr->values, (uint8_t*)(hdr+1), len - ICMP_HDR_SIZE, dst, src);
             break;
         default:
             /* ignore */

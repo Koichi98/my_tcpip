@@ -25,6 +25,7 @@ TESTS = test/step0.exe \
     	test/step21.exe \
     	test/step22.exe \
     	test/step24.exe \
+    	test/dns_example_com.exe \
 
 
 
@@ -45,6 +46,7 @@ OBJS = util.o \
 	   arp.o \
 	   udp.o \
 	   tcp.o \
+	   dns.o \
 
 CFLAGS := $(CFLAGS) -g -W -Wall -Wno-unused-parameter -I .
 

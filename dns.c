@@ -38,12 +38,51 @@ static void dns_dump(const uint8_t *data, size_t len){
 #endif
 }
 
+int question_create(uint8_t question[], const char name[], uint16_t qtype, uint16_t qclass){
+    int i = 0;
+    int label_len = 0;
+    int position = 0;
+    while(1){
+        if(name[i] == '.' || name[i] == '\0') {
+            // Set the length of the next label
+            question[position] = label_len;
+            position++;
+            // Set the value of the label itself
+            memcpy(question+position, &name[i-label_len], label_len);
+            position += label_len;
+
+            label_len = 0;
+            if(name[i] == '\0'){
+                question[position] = 0;
+                position++;
+                break;
+            }
+        }else{
+            label_len++;
+        }
+        i++;
+    }
+
+    // QTYPE:A 00 01
+    uint16_t* question_qtype = (uint16_t*)(question + position);
+    *question_qtype = hton16(qtype);
+    position += 2;
+    // QCLASS:IN 00 01
+    uint16_t* question_qclass = (uint16_t*)(question + position);
+    *question_qclass = hton16(qclass);
+    position += 2;
+
+    return position;
+}
 
 
 int dns_query(int soc, const char name[], struct udp_endpoint* foreign){
     uint8_t buf[1024];
     struct dns_header hdr;
-    int count = 0;
+    uint16_t qtype;
+    uint16_t qclass;
+    int question_len;
+    int count;
 
     hdr.id = 0;
     hdr.flags = (0<<15) + (0<<11) + (0<<10) + (0<<9) + (1<<8) + (0<<7) + (0<<4) + 0;
@@ -54,52 +93,15 @@ int dns_query(int soc, const char name[], struct udp_endpoint* foreign){
 
     memcpy(buf, &hdr, sizeof(hdr));
 
-    count += sizeof(hdr);
-
     // example.com
     // 07 65 78 61 6d 70 6c 65 03 63 6f 6d 00
 
-    //uint8_t qname_type_class[] = {7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1};
-    //int size = sizeof(qname_type_class) / sizeof(uint8_t);
-    //memcpy(buf+count, qname_type_class, size);
-    //count += size;
+    qtype = 1;
+    qclass = 1;
+    question_len = question_create(buf+sizeof(hdr), name, qtype, qclass);
 
-    int i = 0;
-    int label_len = 0;
-    int pointer = 0;
-    while(1){
-        if(name[i] == '.' || name[i] == '\0') {
-            // Set the length of the next label
-            buf[sizeof(hdr)+pointer] = label_len;
-            pointer ++;
-            // Set the value of the label itself
-            memcpy(buf+sizeof(hdr)+pointer, &name[i-label_len], label_len);
-            pointer += label_len;
-
-            label_len = 0;
-            if(name[i] == '\0'){
-                buf[sizeof(hdr)+pointer] = 0;
-                pointer++;
-                break;
-            }
-        }else{
-            label_len++;
-        }
-        i++;
-    }
-
-    // QTYPE:A 00 01
-    buf[sizeof(hdr)+pointer] = 0;
-    buf[sizeof(hdr)+pointer+1] = 1;
-    // QCLASS:IN 00 01
-    buf[sizeof(hdr)+pointer+2] = 0;
-    buf[sizeof(hdr)+pointer+3] = 1;
-
-
-    //hexdump(stderr, buf, count);
-    hexdump(stderr, buf, sizeof(hdr)+pointer+4);
-    //printf("count:%d\n",count);
-    count = sizeof(hdr) + pointer + 4;
+    count = sizeof(hdr) + question_len;
+    hexdump(stderr, buf, count);
 
     // These two accesses are to achieve arp resolve.
     if (udp_sendto(soc, buf, count, foreign) == -1) {

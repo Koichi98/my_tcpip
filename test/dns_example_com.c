@@ -1,9 +1,10 @@
 /*
 The following commands should be exectuted in another terminal.
 
-$ sudo ip route add 192.0.2.0/24 dev tap0
-$ sudo ip link set tap0 up
-$ ping 192.0.2.2
+sudo ip tuntap add mode tap user $USER name tap0
+sudo ip addr add 192.0.2.1/24 dev tap0
+sudo ip link set tap0 up
+systemctl start unbound
 
 */
 
@@ -107,7 +108,6 @@ static void cleanup(void){
 
 
 int main(int argc, char *argv[]){
-    uint8_t str[1024];
     struct my_hostent* hostent;
 
     struct sigaction* sigact; 
@@ -121,7 +121,12 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
+    char addr[IP_ADDR_STR_LEN];
     hostent = my_gethostbyname("example.com");
+    ip_addr_t* h_addr = (ip_addr_t*)hostent->h_addr;
+    ip_addr_ntop(*h_addr, addr, sizeof(addr));
+    printf("hostent->h_addr:%s\n", addr);
+
     
     cleanup();
     return 0;

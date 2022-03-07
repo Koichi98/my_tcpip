@@ -124,7 +124,46 @@ int dns_query(int soc, const char name[], struct udp_endpoint* foreign){
     return 0;
 }
 
+int parse_name(char name[], char section[], char full_message[]){
+    int i = 0;  // position in the name[]
+    int count = 0; // position in the section[]
+    uint8_t label_len;
+    uint16_t offset; 
+    char* buf;
+    int compressed = 0;
+    int position;
 
+    buf = section;
+    position = 0;
+    while(1){
+        label_len = buf[position];
+        printf("label_len:%d\n",label_len);
+        position++;
+        if(label_len == 0){ // End of the name data
+            name[i-1] = '\0';
+            break;
+        }else if((label_len&0xc0) == 0xc0){ // Compressed
+            offset = hton16(*(uint16_t*)(buf+position-1)) & 0x3fff; // Take out the offset pointer as a 16 bits integer
+            printf("offset:%d\n",offset);
+            buf = &full_message[offset];
+            compressed = 1;
+            count = sizeof(uint16_t);
+            position = 0;
+        }else{ // Label
+            memcpy(name+i, &buf[position], label_len);
+            i += label_len;
+            position += label_len;
+            name[i] = '.';
+            i++;
+        }
+    }
+
+    if(!compressed){
+        count = position; 
+    }
+
+    return count;
+}
 
 int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* foreign){
     uint8_t recvbuf[1024]; // TODO: Check the maximum size of the DNS packet
@@ -148,27 +187,13 @@ int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* 
     position = 0;
     question = (char*)(recvhdr+1);
     if(qdcount>0){
-        while(1){
-            label_len = question[position];
-            position++;
-            if(label_len == 0){ // Route 
-                qname[i-1] = '\0'; // Overwrite the period ('.')
-                break;
-            }
-            memcpy(qname+i, &question[position], label_len);
-            i += label_len;
-            position += label_len;
-            qname[i] = '.';
-            i++;
-        }
-        printf("qnname:%s\n",qname);
+        position += parse_name(qname, question, (char*)recvbuf);
         //// Check if the qname matches
         //if(strcmp() != 0){
         //
 
         // QTYPE
         qtype = ntoh16(*(uint16_t*)(question+position));
-        printf("qtype:%d\n",qtype);
         if(qtype!= 1){
             errorf("not ipv4 address :type is not A");
             return -1;
@@ -184,7 +209,6 @@ int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* 
 
         qdcount--;
     }
-    printf("position:%d\n",position);
 
     // Answers
     char* answer;
@@ -200,15 +224,7 @@ int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* 
     char* rdata;
     position = 0;
     while(ancount>0){
-        // NAME 
-        two_octet = ntoh16(*(uint16_t*)(answer+position));
-        // Check for message compression
-        if(((two_octet>>14)&0x3) == 0x3){ // If compressed
-            offset = two_octet & 0x3fff;
-            position += sizeof(two_octet);
-        }else{ 
-            // TODO
-        }
+        position += parse_name(name, answer, (char*)recvbuf);
 
         // TYPE
         type = ntoh16(*(uint16_t*)(answer+position));

@@ -25,6 +25,9 @@ struct my_hostent{
     char* h_addr;
 };
 
+/* Create question section and return the size of the question section. */
+int question_create(uint8_t question[], const char name[], uint16_t qtype, uint16_t qclass);
+
 /* Create dns message and call udp_sendto().
     RETURN VALUE: On success, zero is returned.  On error, -1 is returned. */
 int dns_query(int soc, const char* name, struct udp_endpoint* foreign);

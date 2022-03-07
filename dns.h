@@ -44,6 +44,8 @@ int dns_query(int soc, const char* name, struct udp_endpoint* foreign);
     RETURN VALUE: On success, zero is returned.  On error, -1 is returned. */
 int dns_recv_response(int soc,struct my_hostent* hostent, struct udp_endpoint* foreign);
 
+/* Look up the list of hosts("hosts") and return the corresponding dns_host structure.
+    RETURN VALUE: If found, the corresponding struct dns_host* is returned. Otherwise, NULL is returned. */
 struct dns_host* dns_select(const char* name);
 
 /* Open socket and call dns_query() and dns_recv_response();

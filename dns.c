@@ -126,8 +126,8 @@ int dns_query(int soc, const char name[], struct udp_endpoint* foreign){
 }
 
 int parse_name(char name[], char section[], char full_message[]){
-    int i = 0;  // position in the name[]
-    int count = 0; // position in the section[]
+    int i = 0;  // position in the "name[]"
+    int count = 0; // position in the "section[]"
     uint8_t label_len;
     uint16_t offset; 
     char* buf;
@@ -181,11 +181,12 @@ int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* 
     uint16_t qdcount = ntoh16(recvhdr->qdcount);
     uint16_t qtype;
     uint16_t qclass;
-    position = 0;
+    position = 0; // position in "question"
     question = (char*)(recvhdr+1);
     if(qdcount>0){
         position += parse_name(qname, question, (char*)recvbuf);
-        //// Check if the qname matches
+
+        // Check if the qname matches with the requested "name"
         //if(strcmp() != 0){
         //
 
@@ -285,8 +286,8 @@ struct my_hostent* my_gethostbyname(const char* name){
         return NULL;
     }
 
-    host = dns_select(name);
-    if(host){
+    host = dns_select(name); // Look up the "hosts" list by using "name" as a key.
+    if(host){ // If the requested "name" was statically defined.
         hostent->h_name = host->h_name;
         hostent->h_addr = (char*)&host->h_addr;
         return hostent;
@@ -333,7 +334,7 @@ int dns_init(){
         errorf("calloc() failure");
         return -1;
     }
-
+    // Set the DNS cache server IP address.
     udp_endpoint_pton(DNS_SERVER_ADDR, server_addr);
 
     return 0;

@@ -15,6 +15,7 @@
 #include "arp.h"
 #include "udp.h"
 #include "tcp.h"
+#include "dns.h"
 
 #define NET_THREAD_SLEEP_TIME 1000 /* micro seconds */
 
@@ -445,6 +446,11 @@ int net_init(void){
 
     if(tcp_init()<0){
         errorf("tcp_init() failure");
+        return -1;
+    }
+
+    if(dns_init()<0){
+        errorf("dns_init() failure");
         return -1;
     }
 

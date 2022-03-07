@@ -92,6 +92,11 @@ static int setup(void){
         return -1;
     }
 
+    if(dns_host_register("localhost", "127.0.0.1")){
+        errorf("dns_host_register() failure");
+        return -1;
+    }
+
     
     if(net_run()==-1){
         errorf("net_run() failure");
@@ -123,7 +128,7 @@ int main(int argc, char *argv[]){
     }
 
     char addr[IP_ADDR_STR_LEN];
-    hostent = my_gethostbyname("example.com");
+    hostent = my_gethostbyname("localhost");
     ip_addr_t* h_addr = (ip_addr_t*)hostent->h_addr;
     ip_addr_ntop(*h_addr, addr, sizeof(addr));
     printf("hostent->h_addr:%s\n", addr);

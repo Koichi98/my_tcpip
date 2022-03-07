@@ -10,6 +10,9 @@
 #include "udp.h"
 #include "dns.h"
 
+struct udp_endpoint* server_addr;
+struct dns_host* hosts;
+
 static void dns_dump(const uint8_t *data, size_t len){
     struct dns_header* hdr;
     hdr = (struct dns_header*)data;
@@ -37,6 +40,7 @@ static void dns_dump(const uint8_t *data, size_t len){
     funlockfile(stderr);
 #endif
 }
+
 
 int question_create(uint8_t question[], const char name[], uint16_t qtype, uint16_t qclass){
     int i = 0;
@@ -93,9 +97,6 @@ int dns_query(int soc, const char name[], struct udp_endpoint* foreign){
 
     memcpy(buf, &hdr, sizeof(hdr));
 
-    // example.com
-    // 07 65 78 61 6d 70 6c 65 03 63 6f 6d 00
-
     qtype = 1;
     qclass = 1;
     question_len = question_create(buf+sizeof(hdr), name, qtype, qclass);
@@ -137,14 +138,12 @@ int parse_name(char name[], char section[], char full_message[]){
     position = 0;
     while(1){
         label_len = buf[position];
-        printf("label_len:%d\n",label_len);
         position++;
         if(label_len == 0){ // End of the name data
             name[i-1] = '\0';
             break;
         }else if((label_len&0xc0) == 0xc0){ // Compressed
             offset = hton16(*(uint16_t*)(buf+position-1)) & 0x3fff; // Take out the offset pointer as a 16 bits integer
-            printf("offset:%d\n",offset);
             buf = &full_message[offset];
             compressed = 1;
             count = sizeof(uint16_t);
@@ -179,11 +178,9 @@ int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* 
     // Assumes qdcount == 1.
     char* question;
     char qname[1024]; // TODO: Check the maximum size of the domain name
-    uint8_t label_len;
     uint16_t qdcount = ntoh16(recvhdr->qdcount);
     uint16_t qtype;
     uint16_t qclass;
-    int i = 0;
     position = 0;
     question = (char*)(recvhdr+1);
     if(qdcount>0){
@@ -216,14 +213,13 @@ int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* 
     char name[1024]; 
     // Assumes qdcount == 1.
     uint16_t ancount = ntoh16(recvhdr->ancount);
-    uint16_t two_octet;
-    uint16_t offset;
     uint16_t type;
     uint16_t class;
     uint16_t rdlength;
     char* rdata;
     position = 0;
     while(ancount>0){
+        // DNAME
         position += parse_name(name, answer, (char*)recvbuf);
 
         // TYPE
@@ -267,25 +263,78 @@ int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* 
     return 0;
 }
 
+struct dns_host* dns_select(const char* name){
+    struct dns_host* host;
+
+    for(host=hosts;host!=NULL;host=host->next){
+        if(strcmp(name, host->h_name) == 0){
+            return host;
+        }
+    }
+    return NULL;
+}
+
 struct my_hostent* my_gethostbyname(const char* name){
     int soc;
-    struct udp_endpoint* foreign;
     struct my_hostent* hostent;
+    struct dns_host* host;
 
-    foreign = calloc(1,sizeof(*foreign));
-    udp_endpoint_pton(DNS_SERVER_ADDR, foreign);
+    hostent = calloc(1, sizeof(*hostent));
+    if(!hostent){
+        errorf("calloc() failure");
+        return NULL;
+    }
+
+    host = dns_select(name);
+    if(host){
+        hostent->h_name = host->h_name;
+        hostent->h_addr = (char*)&host->h_addr;
+        return hostent;
+    }
+
     soc = udp_open();
     if (soc == -1) {
         errorf("udp_open() failure");
         return NULL;
     }
 
-    dns_query(soc, name, foreign);
+    dns_query(soc, name, server_addr);
 
-    hostent = calloc(1, sizeof(*hostent));
-    dns_recv_response(soc, hostent, foreign);
+    dns_recv_response(soc, hostent, server_addr);
 
     udp_close(soc);
 
     return hostent;
+}
+
+int dns_host_register(char* h_name, char* h_addr){
+    struct dns_host* host;
+
+    host = calloc(1, sizeof(*host));
+    if(!host){
+        errorf("calloc() failure");
+        return -1;
+    }
+
+    // Set the value 
+    host->h_name = h_name;
+    ip_addr_pton(h_addr, &host->h_addr);
+    // Add to the head of the "hosts"
+    host->next = hosts;
+    hosts = host;
+
+    return 0;
+}
+
+int dns_init(){
+
+    server_addr = calloc(1,sizeof(*server_addr));
+    if(!server_addr){
+        errorf("calloc() failure");
+        return -1;
+    }
+
+    udp_endpoint_pton(DNS_SERVER_ADDR, server_addr);
+
+    return 0;
 }

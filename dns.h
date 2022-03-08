@@ -7,8 +7,28 @@
 #include "ip.h"
 #include "udp.h"
 
-#define DNS_SERVER_ADDR "192.0.2.1:53"
+//#define DEFAULT_DNS_SERVER_ADDR "192.0.2.1"
+#define DEFAULT_DNS_SERVER_ADDR "8.8.8.8"
+#define DNS_RESPONSE_TIMEOUT 5 // second
 
+/*RFC 1035
+    The packet format of Header section
+                                    1  1  1  1  1  1
+      0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |                      ID                       |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |QR|   Opcode  |AA|TC|RD|RA|   Z    |   RCODE   |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |                    QDCOUNT                    |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |                    ANCOUNT                    |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |                    NSCOUNT                    |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |                    ARCOUNT                    |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+*/
 struct dns_header {
     uint16_t id;
     uint16_t flags;
@@ -32,13 +52,18 @@ struct dns_host{
     ip_addr_t h_addr;
 };
 
+struct dns_cache_server{
+    struct dns_cache_server* next;
+    ip_addr_t addr;
+};
+
 
 /* Create question section and return the size of the question section. */
 int question_create(uint8_t question[], const char name[], uint16_t qtype, uint16_t qclass);
 
 /* Create dns message and call udp_sendto().
     RETURN VALUE: On success, zero is returned.  On error, -1 is returned. */
-int dns_query(int soc, const char* name, struct udp_endpoint* foreign);
+int dns_query(int soc, const char* name, struct udp_endpoint* foreign, struct timeval* sent_time);
 
 /* Parse the NAME part of the given resource record("section[]") and set the name to "name[]".
     RETURN VALUE: The number of bytes moved forward while parsing.*/
@@ -46,7 +71,7 @@ int parse_name(char name[], char section[], char full_message[]);
 
 /* Call udp_recvfrom() and set the value to the hostent structure from the parsed message.
     RETURN VALUE: On success, zero is returned.  On error, -1 is returned. */
-int dns_recv_response(int soc,struct my_hostent* hostent, struct udp_endpoint* foreign);
+int dns_recv_response(int soc,struct my_hostent* hostent, struct udp_endpoint* foreign, struct timeval* sent_time);
 
 /* Look up the list of hosts("hosts") and return the corresponding dns_host structure.
     RETURN VALUE: If found, the corresponding struct dns_host* is returned. Otherwise, NULL is returned. */
@@ -58,6 +83,9 @@ extern struct my_hostent* my_gethostbyname(const char* name);
 
 /* Register a pair of host name and the IP address to perform name resolution statically. */
 extern int dns_host_register(char* h_name, char* h_addr);
+
+/* Register a pair of host name and the IP address to perform name resolution statically. */
+extern int dns_cache_server_register(char* addr);
 
 extern int dns_init();
 

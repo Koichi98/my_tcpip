@@ -42,6 +42,7 @@ struct udp_pcb {
      struct queue_head queue; /* receive queue */
      int wait; /* number of wait for cond */
      pthread_cond_t cond;
+     int non_blocking;
  };
  
  /* NOTE: the data follows immediately after the structure */
@@ -176,21 +177,25 @@ static struct udp_queue_entry* udp_pcb_queue_pop(struct udp_pcb *pcb){
     struct udp_queue_entry* entry;
     struct timespec timeout;
     
-
-    ctx = net_interrupt_subscribe();
-    while(!net_interrupt_occurred(ctx)){
+    if(pcb->non_blocking){
         entry = (struct udp_queue_entry*)queue_pop(&pcb->queue);
-        if(entry){
-            break;
-        }
-        clock_gettime(CLOCK_REALTIME, &timeout);
-        timespec_add_nsec(&timeout, 100000000); /* 100ms */
-        pcb->wait++;
-        pthread_cond_timedwait(&pcb->cond, &mutex, &timeout);
-        pcb->wait--;
+    }else{
+        ctx = net_interrupt_subscribe();
+        while(!net_interrupt_occurred(ctx)){
+            entry = (struct udp_queue_entry*)queue_pop(&pcb->queue);
+            if(entry){
+                break;
+            }
+            clock_gettime(CLOCK_REALTIME, &timeout);
+            timespec_add_nsec(&timeout, 100000000); /* 100ms */
+            pcb->wait++;
+            pthread_cond_timedwait(&pcb->cond, &mutex, &timeout);
+            pcb->wait--;
 
+        }
+        net_interrupt_unsubscribe(ctx);
     }
-    net_interrupt_unsubscribe(ctx);
+    
     return entry;
 }
 
@@ -299,7 +304,7 @@ ssize_t udp_output(struct udp_endpoint *src, struct udp_endpoint *dst, const  ui
  */
 
 // Allocate the pcb and return the id.
-int udp_open(void){
+int udp_open(int non_blocking){
     struct udp_pcb* pcb;
 
     pcb = udp_pcb_alloc();
@@ -307,6 +312,8 @@ int udp_open(void){
         errorf("udp_pcb_alloc() failure");
         return -1;
     }
+
+    pcb->non_blocking = non_blocking;
 
     return udp_pcb_id(pcb);
 }
@@ -397,12 +404,19 @@ ssize_t udp_recvfrom(int id, uint8_t *buf, size_t size, struct udp_endpoint *for
     pcb = udp_pcb_get(id);
 
     entry = udp_pcb_queue_pop(pcb);
+
     if(!entry){
-        if(pcb->state == UDP_PCB_STATE_CLOSING){
-            udp_pcb_release(pcb);
+        if(pcb->non_blocking){
+            pthread_mutex_unlock(&mutex);
+            return 0;
+        }else{
+            if(pcb->state == UDP_PCB_STATE_CLOSING){
+                udp_pcb_release(pcb);
+            }
+        
+            pthread_mutex_unlock(&mutex);
+            return -1;
         }
-        pthread_mutex_unlock(&mutex);
-        return -1;
     }
     pthread_mutex_unlock(&mutex);
 

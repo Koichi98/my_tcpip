@@ -120,7 +120,7 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    soc = udp_open();
+    soc = udp_open(0);
     if (soc == -1) {
         errorf("udp_open() failure");
         return -1;

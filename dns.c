@@ -10,8 +10,8 @@
 #include "udp.h"
 #include "dns.h"
 
-struct udp_endpoint* server_addr;
 struct dns_host* hosts;
+struct dns_cache_server* servers;
 
 static void dns_dump(const uint8_t *data, size_t len){
     struct dns_header* hdr;
@@ -80,7 +80,7 @@ int question_create(uint8_t question[], const char name[], uint16_t qtype, uint1
 }
 
 
-int dns_query(int soc, const char name[], struct udp_endpoint* foreign){
+int dns_query(int soc, const char name[], struct udp_endpoint* foreign, struct timeval* sent_time){
     uint8_t buf[1024];
     struct dns_header hdr;
     uint16_t qtype;
@@ -116,6 +116,9 @@ int dns_query(int soc, const char name[], struct udp_endpoint* foreign){
         errorf("udp_sendto() failure");
         return -1;
     }
+
+    gettimeofday(sent_time, NULL);
+
     usleep(5000);
 
     // Actual sending operation
@@ -165,13 +168,32 @@ int parse_name(char name[], char section[], char full_message[]){
     return count;
 }
 
-int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* foreign){
+int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* foreign, struct timeval* sent_time){
     uint8_t recvbuf[1024]; // TODO: Check the maximum size of the DNS packet
     ssize_t len;
     struct dns_header* recvhdr;
     int position;
+    struct timeval now, diff;
+    struct timeval interval = {DNS_RESPONSE_TIMEOUT,0};
+    char addr[IP_ADDR_STR_LEN];
 
-    len = udp_recvfrom(soc, recvbuf, 1024, foreign);
+    while(1){
+        len = udp_recvfrom(soc, recvbuf, 1024, foreign);
+        if(len>0){
+            break;
+        }
+        gettimeofday(&now, NULL);
+        timersub(&now, sent_time, &diff);
+
+        if(timercmp(&interval, &diff, <) != 0){
+            ip_addr_ntop(foreign->addr, addr, sizeof(addr));
+            errorf("DNS cache server (%s) does not respond.");
+            return -1;
+        }
+
+        usleep(1000); // Polling every 1000 microseconds.
+    }
+
     recvhdr = (struct dns_header*)recvbuf;
     dns_dump(recvbuf, len);
 
@@ -286,6 +308,8 @@ struct my_hostent* my_gethostbyname(const char* name){
     int soc;
     struct my_hostent* hostent;
     struct dns_host* host;
+    struct timeval sent_time;
+    struct udp_endpoint server;
 
     hostent = calloc(1, sizeof(*hostent));
     if(!hostent){
@@ -303,15 +327,27 @@ struct my_hostent* my_gethostbyname(const char* name){
         return hostent;
     }
 
-    soc = udp_open();
+    soc = udp_open(1); // Open the udp socket with non-blocking flag.
     if (soc == -1) {
         errorf("udp_open() failure");
         return NULL;
     }
 
-    dns_query(soc, name, server_addr);
+    server.addr = servers->addr;
+    server.port = hton16(53);
+    dns_query(soc, name, &server, &sent_time);
+ 
+    if(dns_recv_response(soc, hostent, &server, &sent_time)<0){ // If the accessed DNS cache server does not respond.
+        if (servers->next != NULL){
+            server.addr = servers->next->addr;
 
-    dns_recv_response(soc, hostent, server_addr);
+            dns_query(soc, name, &server, &sent_time);
+            if(dns_recv_response(soc, hostent, &server, &sent_time)<0){
+                udp_close(soc);
+                return NULL;
+            }
+        }
+    }
 
     udp_close(soc);
 
@@ -337,15 +373,31 @@ int dns_host_register(char* h_name, char* h_addr){
     return 0;
 }
 
-int dns_init(){
+int dns_cache_server_register(char* addr){
+    struct dns_cache_server* server;
 
-    server_addr = calloc(1,sizeof(*server_addr));
-    if(!server_addr){
+    server = calloc(1, sizeof(*server));
+    if(!server){
         errorf("calloc() failure");
         return -1;
     }
-    // Set the DNS cache server IP address.
-    udp_endpoint_pton(DNS_SERVER_ADDR, server_addr);
+
+    // Set the value 
+    ip_addr_pton(addr, &server->addr);
+    // Add to the head of the "hosts"
+    server->next = servers;
+    servers = server;
+
+    return 0;
+}
+
+int dns_init(){
+
+    // Set the default DNS cache server IP address.
+    if(dns_cache_server_register(DEFAULT_DNS_SERVER_ADDR)){
+        errorf("dns_cache_server_register() failure");
+        return -1;
+    }
 
     return 0;
 }

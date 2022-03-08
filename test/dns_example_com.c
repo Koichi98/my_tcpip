@@ -97,10 +97,11 @@ static int setup(void){
         return -1;
     }
 
-    //if(dns_domain_register("")){
-        //errorf("dns_domain_register() failure");
-        //return -1;
-    //}
+    
+    if(dns_cache_server_register("192.0.2.1")){
+        errorf("dns_cache_server_register() failure");
+        return -1;
+    }
 
     
     if(net_run()==-1){
@@ -131,6 +132,23 @@ int main(int argc, char *argv[]){
         errorf("setup() failure");
         return -1;
     }
+
+
+    //ip_addr_t src, dst;
+    //uint16_t id, seq = 0;
+    //size_t offset = IP_HDR_SIZE_MIN + ICMP_HDR_SIZE;
+
+    //ip_addr_pton("192.0.2.2", &src);
+    //ip_addr_pton("8.8.8.8", &dst);
+    //id = getpid() % UINT16_MAX;
+    //while (!terminate) {
+        //if (icmp_output(ICMP_TYPE_ECHO, 0, hton32(id << 16 | ++seq), test_data + offset, sizeof(test_data) - offset, src, dst) == -1) {
+            //errorf("icmp_output() failure");
+            //break;
+        //}
+        //sleep(1);
+    //}
+
 
     char addr[IP_ADDR_STR_LEN];
     hostent = my_gethostbyname("yahoo.co.jp");

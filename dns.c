@@ -88,8 +88,9 @@ int dns_query(int soc, const char name[], struct udp_endpoint* foreign){
     int question_len;
     int count;
 
+    // Set the header values
     hdr.id = 0;
-    hdr.flags = (0<<15) + (0<<11) + (0<<10) + (0<<9) + (1<<8) + (0<<7) + (0<<4) + 0;
+    hdr.flags = hton16((0<<15) + (0<<11) + (0<<10) + (0<<9) + (1<<8) + (0<<7) + (0<<4) + 0);
     hdr.qdcount = hton16(1); // Convert to network byte order
     hdr.ancount = 0;
     hdr.nscount = 0;
@@ -219,6 +220,9 @@ int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* 
     uint16_t rdlength;
     char* rdata;
     position = 0;
+    char* h_addr[ancount+1]; // To set the NULL pointer at the last.
+    h_addr[ancount] = NULL;
+    int count = 0;
     while(ancount>0){
         // DNAME
         position += parse_name(name, answer, (char*)recvbuf);
@@ -255,10 +259,13 @@ int dns_recv_response(int soc, struct my_hostent* hostent, struct udp_endpoint* 
         hostent->h_alias = NULL;
         hostent->h_addrtype = 2; // linux/socket.h: #define AF_INET 2
         hostent->h_length = 4; 
-        hostent->h_addr = rdata;
+        h_addr[count] = rdata;
 
         ancount--;
+        count++;
     }
+
+    hostent->h_addr = h_addr;
     
 
     return 0;
@@ -289,7 +296,10 @@ struct my_hostent* my_gethostbyname(const char* name){
     host = dns_select(name); // Look up the "hosts" list by using "name" as a key.
     if(host){ // If the requested "name" was statically defined.
         hostent->h_name = host->h_name;
-        hostent->h_addr = (char*)&host->h_addr;
+        char* h_addr[2];
+        h_addr[0] = (char*)&host->h_addr;
+        h_addr[1] = NULL;
+        hostent->h_addr = h_addr;
         return hostent;
     }
 

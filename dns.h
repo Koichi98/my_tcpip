@@ -23,7 +23,7 @@ struct my_hostent{
     char* h_alias;
     int h_addrtype;
     int h_length;
-    char* h_addr;
+    char** h_addr;
 };
 
 struct dns_host{
@@ -39,6 +39,10 @@ int question_create(uint8_t question[], const char name[], uint16_t qtype, uint1
 /* Create dns message and call udp_sendto().
     RETURN VALUE: On success, zero is returned.  On error, -1 is returned. */
 int dns_query(int soc, const char* name, struct udp_endpoint* foreign);
+
+/* Parse the NAME part of the given resource record("section[]") and set the name to "name[]".
+    RETURN VALUE: The number of bytes moved forward while parsing.*/
+int parse_name(char name[], char section[], char full_message[]);
 
 /* Call udp_recvfrom() and set the value to the hostent structure from the parsed message.
     RETURN VALUE: On success, zero is returned.  On error, -1 is returned. */

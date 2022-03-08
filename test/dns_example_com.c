@@ -97,6 +97,11 @@ static int setup(void){
         return -1;
     }
 
+    //if(dns_domain_register("")){
+        //errorf("dns_domain_register() failure");
+        //return -1;
+    //}
+
     
     if(net_run()==-1){
         errorf("net_run() failure");
@@ -128,10 +133,14 @@ int main(int argc, char *argv[]){
     }
 
     char addr[IP_ADDR_STR_LEN];
-    hostent = my_gethostbyname("localhost");
-    ip_addr_t* h_addr = (ip_addr_t*)hostent->h_addr;
-    ip_addr_ntop(*h_addr, addr, sizeof(addr));
-    printf("hostent->h_addr:%s\n", addr);
+    hostent = my_gethostbyname("yahoo.co.jp");
+    //ip_addr_t* h_addr = (ip_addr_t*)hostent->h_addr;
+	ip_addr_t** h_addr= (ip_addr_t **)hostent->h_addr;
+	for (int i = 0; h_addr[i]!=NULL; i++) {
+        ip_addr_ntop(*h_addr[i], addr, sizeof(addr));
+	    printf("host_info->h_addr_list[%d]:\t%s\n", i, addr);
+	}
+    //printf("hostent->h_addr:%s\n", addr);
 
     
     cleanup();
